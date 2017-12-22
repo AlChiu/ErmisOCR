@@ -38,14 +38,15 @@ def sort_contours(contours):
         boxes.append(box)
 
     # Need to sort this list by x and y-coordinates
-    boxes = sorted(boxes, key=itemgetter(2, 3))
+    boxes.sort(key=itemgetter(3))
+    boxes.sort(key=itemgetter(2))
 
     return boxes
 
 
-def dis(x, y):
+def dis(start, end):
     """Calculate the Euclidean distance in one direction"""
-    return abs(x - y)
+    return abs(start - end)
 
 
 def merge_boxes(contours, height, width):
@@ -55,9 +56,9 @@ def merge_boxes(contours, height, width):
     Output -- list of new character bounding boxes for special characters
     """
     # Thresholds for checking multi-component characters
-    h1 = .12 * height
+    h1 = .1 * height
     h2 = .05 * height
-    w1 = .05 * width
+    w1 = .1 * width
 
     # New list of bounding boxes
     merged = []
@@ -79,8 +80,8 @@ def merge_boxes(contours, height, width):
                 # We have a potential % character
                 new_x = min(bef[2], cur[2], aft[2])
                 new_y = min(bef[3], cur[3], aft[3])
-                new_w = max(bef[4], cur[4], aft[4])
-                new_h = max(bef[5], cur[5], aft[5])
+                new_w = max(cur[4], aft[2]+aft[4]-new_x, cur[2]+cur[4]-new_x)
+                new_h = max(cur[5], aft[3]+aft[5]-new_y, cur[3]+cur[5]-new_y)
             else:
                 new_x = min(bef[2], cur[2])
                 new_y = min(bef[3], cur[3])
@@ -91,10 +92,8 @@ def merge_boxes(contours, height, width):
                 else:
                     # The next set of characters are the vertical
                     # two-component characters
-                    # NEED TO ASSOCIATE THE MIN_Y HEIGHT
-                    new_w = max(bef[4], cur[4])
-                    new_h = bef[5] + cur[5] + (max(bef[3], cur[3])
-                                               - (new_y + min(bef[5], cur[5])))
+                    new_w = max(bef[4], cur[2]+cur[4]-bef[2])
+                    new_h = max(cur[3]+cur[5]-bef[3], bef[3]+bef[5]-cur[3])
         # Stand alone character
         else:
             new_x = cur[2]
