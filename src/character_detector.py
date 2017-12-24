@@ -23,6 +23,11 @@ def create_word_mask(boxes, height, width):
 
     # With this mask, we will have to unidirectionally dilate so that
     # characters within the word are connected.
+    # Kernel is used to dilate in the horizontal direction
+    kernel_1 = np.zeros((1, 20), dtype="uint8")
+    kernel_2 = np.ones((1, 21), dtype="uint8")
+    kernel = np.append(kernel_1, kernel_2)
+    mask = cv2.dilate(mask, kernel, iterations=1)
     return mask
 
 
@@ -37,9 +42,22 @@ def sort_contours(contours):
         box = [center_x, center_y, x_coord, y_coord, width, height]
         boxes.append(box)
 
-    # Need to sort this list by x and y-coordinates
+    # Need to sort the bounding boxes by line first
+    # Then sort by characters in the line
+    # First, sort the contours by the y-coordinate
     boxes.sort(key=itemgetter(3))
-    boxes.sort(key=itemgetter(2))
+    # Set the initial line threshold to the bottom of the first character
+    line_theshold = boxes[0][3] + boxes[0][5] - 1
+    # If any top y coordinate is less than the line threshold, it is a new line
+    l_start = 0
+    for i in range(len(boxes)):
+        if boxes[i][3] > line_theshold:
+            # Sort the line by the x-coordinate
+            boxes[l_start:i] = sorted(boxes[l_start:i], key=itemgetter(2))
+            l_start = i
+            line_theshold = max(boxes[i][3]+boxes[i][5]-1, line_theshold)
+    # Sort the last line
+    boxes[l_start:] = sorted(boxes[l_start:], key=itemgetter(2))
 
     return boxes
 
@@ -55,22 +73,22 @@ def merge_boxes(contours, height, width):
     Input -- list of character bounding boxes, image height, and image width
     Output -- list of new character bounding boxes for special characters
     """
-    # Thresholds for checking multi-component characters
-    h1 = .1 * height
-    h2 = .05 * height
-    w1 = .1 * width
-
     # New list of bounding boxes
     merged = []
 
     # Produce a sorted list of bounding box coordinates with their centers
     box = sort_contours(contours)
 
+    # Thresholds for checking multi-component characters
+    h1 = .105 * height
+    h2 = .02 * height
+    w1 = .01 * width
+
     # Need to merge boxes of multi-component
     # characters i, j, !, ?, :, ;, =, %, and ".
-    empty = (0, 0, 0, 0, 0, 0)
+    empty = [0, 0, 0, 0, 0, 0]
     prev_list = [empty] + box
-    aft_list = box + [empty]
+    aft_list = box[1:] + [empty]
 
     for bef, cur, aft in zip(prev_list, box, aft_list):
         # First check the current and previous box
@@ -140,7 +158,7 @@ def detector_for_words(image):
     masked_image = cv2.bitwise_and(resized_image, resized_image, mask=mask)
 
     # Show this new image for testing
-    cv2.imshow("bounding_boxes", masked_image)
+    cv2.imshow("words", masked_image)
     cv2.waitKey(0)
 
     return boxes
