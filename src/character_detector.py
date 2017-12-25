@@ -27,6 +27,7 @@ def create_word_mask(boxes, height, width):
     kernel_1 = np.zeros((1, 20), dtype="uint8")
     kernel_2 = np.ones((1, 21), dtype="uint8")
     kernel = np.append(kernel_1, kernel_2)
+    kernel.shape = (1, 41)
     mask = cv2.dilate(mask, kernel, iterations=1)
     return mask
 
@@ -104,7 +105,7 @@ def merge_boxes(contours, height, width):
                 new_x = min(bef[2], cur[2])
                 new_y = min(bef[3], cur[3])
                 # Check for the quotation mark
-                if(dis(cur[1], bef[1]) <= h2):
+                if dis(cur[1], bef[1]) <= h2:
                     new_w = bef[4] + cur[4]
                     new_h = max(bef[5], cur[5])
                 else:
