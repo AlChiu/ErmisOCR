@@ -24,10 +24,21 @@ def create_word_mask(boxes, height, width):
     # With this mask, we will have to unidirectionally dilate so that
     # characters within the word are connected.
     # Kernel is used to dilate in the horizontal direction
-    kernel_1 = np.zeros((1, 20), dtype="uint8")
-    kernel_2 = np.ones((1, 21), dtype="uint8")
+    #
+    # First, we need to determine the size of the kernel
+    # We need two row matrices (one is zeros and other is ones).
+    # The size of the zero kernel is relative to the width of the image
+    # while the one kernel is just +1 of the zero kernel.
+    k_1_width = int(.005 * width)
+    k_2_width = k_1_width + 1
+    kernel_1 = np.zeros((1, k_1_width), dtype="uint8")
+    kernel_2 = np.ones((1, k_2_width), dtype="uint8")
+
+    # We the combine the two kernels into one large row kernel for dilation
     kernel = np.append(kernel_1, kernel_2)
-    kernel.shape = (1, 41)
+    kernel.shape = (1, k_1_width + k_2_width)
+
+    # With the new kernel, we dilate the mask image. 
     mask = cv2.dilate(mask, kernel, iterations=1)
     return mask
 
