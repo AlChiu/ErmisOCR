@@ -4,10 +4,12 @@ This module contains the necessary scripts to detect characters and merge
 bouding boxes of the characters.
 
 """
+import collections
 import argparse
 from operator import itemgetter
 import cv2
 import numpy as np
+import segmentor
 
 
 def create_word_mask(boxes, height, width):
@@ -19,7 +21,7 @@ def create_word_mask(boxes, height, width):
     for box in boxes:
         cv2.rectangle(mask, (box[0], box[1]),
                       (box[0]+box[2], box[1]+box[3]),
-                      (255, 255, 255), -1)
+                      255, -1)
 
     # With this mask, we will have to unidirectionally dilate so that
     # characters within the word are connected.
@@ -38,9 +40,16 @@ def create_word_mask(boxes, height, width):
     kernel = np.append(kernel_1, kernel_2)
     kernel.shape = (1, k_1_width + k_2_width)
 
-    # With the new kernel, we dilate the mask image. 
+    # With the new kernel, we dilate the mask image.
     mask = cv2.dilate(mask, kernel, iterations=1)
-    return mask
+
+    # With this new mask image, we find new contours and bounding boxes.
+    _, contours, _ = cv2.findContours(mask,
+                                      cv2.RETR_EXTERNAL,
+                                      cv2.CHAIN_APPROX_SIMPLE)
+    mask_contours = sort_contours(contours)
+
+    return mask_contours
 
 
 def sort_contours(contours):
@@ -62,12 +71,12 @@ def sort_contours(contours):
     line_theshold = boxes[0][3] + boxes[0][5] - 1
     # If any top y coordinate is less than the line threshold, it is a new line
     l_start = 0
-    for i in range(len(boxes)):
-        if boxes[i][3] > line_theshold:
+    for i, box in enumerate(boxes):
+        if box[3] > line_theshold:
             # Sort the line by the x-coordinate
             boxes[l_start:i] = sorted(boxes[l_start:i], key=itemgetter(2))
             l_start = i
-            line_theshold = max(boxes[i][3]+boxes[i][5]-1, line_theshold)
+            line_theshold = max(box[3]+box[5]-1, line_theshold)
     # Sort the last line
     boxes[l_start:] = sorted(boxes[l_start:], key=itemgetter(2))
 
@@ -166,14 +175,12 @@ def detector_for_words(image):
 
     # Let's draw the contours to see what we have
     boxes = merge_boxes(contours, resized_height, resized_width)
-    mask = create_word_mask(boxes, resized_height, resized_width)
-    masked_image = cv2.bitwise_and(resized_image, resized_image, mask=mask)
+    mask_boxes = create_word_mask(boxes, resized_height, resized_width)
 
-    # Show this new image for testing
-    cv2.imshow("words", masked_image)
-    cv2.waitKey(0)
+    Image_Boxes = collections.namedtuple('Image_Boxes', ['Image', 'Boxes'])
+    result = Image_Boxes(resized_image, mask_boxes)
 
-    return boxes
+    return result
 
 
 if __name__ == "__main__":
@@ -183,4 +190,5 @@ if __name__ == "__main__":
     ARGS = vars(AP.parse_args())
 
     # Draw contours of characters in the image
-    detector_for_words(ARGS["image"])
+    word_boxes = detector_for_words(ARGS["image"])
+    segmentor.segment(word_boxes.Image, word_boxes.Boxes, "word")
