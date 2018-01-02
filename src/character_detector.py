@@ -4,12 +4,27 @@ This module contains the necessary scripts to detect characters and merge
 bouding boxes of the characters.
 
 """
+import os
 import collections
 import argparse
+import glob
+import re
 from operator import itemgetter
 import cv2
 import numpy as np
 import segmentor
+
+NUMBERS = re.compile(r'(\d+)')
+IMAGEBOXES = collections.namedtuple('Image_Boxes', ['Name',
+                                                    'Image',
+                                                    'Boxes'])
+
+
+def numerical_sort(value):
+    """Used to sort file names numberically instead of alphabetically"""
+    parts = NUMBERS.split(value)
+    parts[1::2] = map(int, parts[1::2])
+    return parts
 
 
 def create_word_mask(boxes, height, width):
@@ -18,9 +33,9 @@ def create_word_mask(boxes, height, width):
     mask = np.zeros((height, width), dtype="uint8")
 
     # Using the bounding boxes, we will draw white boxes on the mask
-    for box in boxes:
-        cv2.rectangle(mask, (box[0], box[1]),
-                      (box[0]+box[2], box[1]+box[3]),
+    for mask_box in boxes:
+        cv2.rectangle(mask, (mask_box[0], mask_box[1]),
+                      (mask_box[0]+mask_box[2], mask_box[1]+mask_box[3]),
                       255, -1)
 
     # With this mask, we will have to unidirectionally dilate so that
@@ -47,40 +62,47 @@ def create_word_mask(boxes, height, width):
     _, contours, _ = cv2.findContours(mask,
                                       cv2.RETR_EXTERNAL,
                                       cv2.CHAIN_APPROX_SIMPLE)
-    mask_contours = sort_contours(contours)
+    mask_contours = sort_contours(contours, "word")
 
     return mask_contours
 
 
-def sort_contours(contours):
+def sort_contours(contours, setting):
     """Sort the contours by x and y coordinates
      and calculate the central coordinates"""
-    boxes = []
+    bound_box = []
     for contour in contours:
         [x_coord, y_coord, width, height] = cv2.boundingRect(contour)
         center_x = x_coord + width / 2
         center_y = y_coord + height / 2
-        box = [center_x, center_y, x_coord, y_coord, width, height]
-        boxes.append(box)
+        single_box = [center_x, center_y, x_coord, y_coord, width, height]
+        bound_box.append(single_box)
 
-    # Need to sort the bounding boxes by line first
-    # Then sort by characters in the line
-    # First, sort the contours by the y-coordinate
-    boxes.sort(key=itemgetter(3))
-    # Set the initial line threshold to the bottom of the first character
-    line_theshold = boxes[0][3] + boxes[0][5] - 1
-    # If any top y coordinate is less than the line threshold, it is a new line
-    l_start = 0
-    for i, box in enumerate(boxes):
-        if box[3] > line_theshold:
-            # Sort the line by the x-coordinate
-            boxes[l_start:i] = sorted(boxes[l_start:i], key=itemgetter(2))
-            l_start = i
-            line_theshold = max(box[3]+box[5]-1, line_theshold)
-    # Sort the last line
-    boxes[l_start:] = sorted(boxes[l_start:], key=itemgetter(2))
+    if setting == "word":
+        # Need to sort the bounding bound_box by line first
+        # Then sort by characters in the line
+        # First, sort the contours by the y-coordinate
+        bound_box.sort(key=itemgetter(3))
+        # Set the initial line threshold to the bottom of the first character
+        line_theshold = bound_box[0][3] + bound_box[0][5] - 1
+        # If any top y coordinate is less than the line threshold,
+        # it is a new line
+        l_start = 0
+        for i, char_bound_box in enumerate(bound_box):
+            if char_bound_box[3] > line_theshold:
+                # Sort the line by the x-coordinate
+                bound_box[l_start:i] = sorted(bound_box[l_start:i],
+                                              key=itemgetter(2))
+                l_start = i
+                line_theshold = max(char_bound_box[3]+char_bound_box[5]-1,
+                                    line_theshold)
+        # Sort the last line
+        bound_box[l_start:] = sorted(bound_box[l_start:], key=itemgetter(2))
+    else:
+        # Just sort by the x-coordinate
+        bound_box.sort(key=itemgetter(2))
 
-    return boxes
+    return bound_box
 
 
 def dis(start, end):
@@ -88,7 +110,7 @@ def dis(start, end):
     return abs(start - end)
 
 
-def merge_boxes(contours, height, width):
+def merge_boxes(contours, height, width, setting):
     """Merge the bounding boxes
 
     Input -- list of character bounding boxes, image height, and image width
@@ -98,20 +120,25 @@ def merge_boxes(contours, height, width):
     merged = []
 
     # Produce a sorted list of bounding box coordinates with their centers
-    box = sort_contours(contours)
+    current_list = sort_contours(contours, setting)
 
     # Thresholds for checking multi-component characters
-    h1 = .105 * height
-    h2 = .02 * height
-    w1 = .01 * width
+    if setting == "word":
+        h1 = .105 * height
+        h2 = .02 * height
+        w1 = .01 * width
+    else:
+        h1 = .75 * height
+        h2 = .2 * height
+        w1 = .05 * width
 
     # Need to merge boxes of multi-component
     # characters i, j, !, ?, :, ;, =, %, and ".
     empty = [0, 0, 0, 0, 0, 0]
-    prev_list = [empty] + box
-    aft_list = box[1:] + [empty]
+    prev_list = [empty] + current_list
+    aft_list = current_list[1:] + [empty]
 
-    for bef, cur, aft in zip(prev_list, box, aft_list):
+    for bef, cur, aft in zip(prev_list, current_list, aft_list):
         # First check the current and previous box
         if(dis(cur[0], bef[0]) <= w1) and (h2 < dis(cur[1], bef[1]) <= h1):
             # Check three boxes for the % character
@@ -144,14 +171,16 @@ def merge_boxes(contours, height, width):
     return merged
 
 
-def detector_for_words(image):
+def detector_for_words(full_image):
     """Detect image for words
 
     Input -- image that needs translation
     Ouput -- list of bounding box coordinates for the words
     """
+    filename = os.path.splitext(os.path.basename(full_image))[0]
+
     # Read in image and resize (Scale up) the image
-    resized_image = cv2.resize(cv2.imread(image), None, fx=3, fy=3,
+    resized_image = cv2.resize(cv2.imread(full_image), None, fx=3, fy=3,
                                interpolation=cv2.INTER_CUBIC)
 
     # Convert the image into a grayscale image.
@@ -174,11 +203,39 @@ def detector_for_words(image):
                                       cv2.CHAIN_APPROX_SIMPLE)
 
     # Let's draw the contours to see what we have
-    boxes = merge_boxes(contours, resized_height, resized_width)
+    boxes = merge_boxes(contours, resized_height, resized_width, "word")
     mask_boxes = create_word_mask(boxes, resized_height, resized_width)
+    result = IMAGEBOXES(filename, resized_image, mask_boxes)
 
-    Image_Boxes = collections.namedtuple('Image_Boxes', ['Image', 'Boxes'])
-    result = Image_Boxes(resized_image, mask_boxes)
+    return result
+
+
+def detector_for_characters(word_image):
+    """Detect characters from word images"""
+    filename = os.path.splitext(os.path.basename(word_image))[0]
+    word = cv2.imread(word_image)
+
+    # Convert to grayscale image
+    gray_word = cv2.cvtColor(word, cv2.COLOR_BGR2GRAY)
+
+    # Obtain the image dimensions
+    height, width = gray_word.shape
+
+    # Blur the image
+    gray_blur = cv2.bilateralFilter(gray_word, 13, 55, 55)
+
+    # Otsu binarization
+    _, gray_otsu = cv2.threshold(gray_blur, 0, 255,
+                                 cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    # Contours
+    _, char_contours, _ = cv2.findContours(gray_otsu,
+                                           cv2.RETR_EXTERNAL,
+                                           cv2.CHAIN_APPROX_SIMPLE)
+
+    # Sort and merge the contours, get the list of bounding boxes
+    characters = merge_boxes(char_contours, height, width, "char")
+    result = IMAGEBOXES(filename, word_image, characters)
 
     return result
 
@@ -191,4 +248,20 @@ if __name__ == "__main__":
 
     # Draw contours of characters in the image
     word_boxes = detector_for_words(ARGS["image"])
-    segmentor.segment(word_boxes.Image, word_boxes.Boxes, "word")
+    # print(word_boxes.Name)
+    segmentor.segment(word_boxes.Name,
+                      word_boxes.Image,
+                      word_boxes.Boxes,
+                      "word")
+
+    for image in sorted(glob.iglob('word_*.png'), key=numerical_sort):
+        char_boxes = detector_for_characters(image)
+        w_image = cv2.imread(image)
+        for box in char_boxes.Boxes:
+            cv2.rectangle(w_image, (box[0], box[1]),
+                          (box[0]+box[2], box[1]+box[3]),
+                          (0, 255, 0), 1)
+        print(char_boxes.Image)
+        print(char_boxes.Boxes)
+        cv2.imshow("char", w_image)
+        cv2.waitKey(0)
