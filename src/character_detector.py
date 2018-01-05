@@ -27,46 +27,6 @@ def numerical_sort(value):
     return parts
 
 
-def create_word_mask(boxes, height, width):
-    """Create a mask for our words"""
-    # Create a blank mask
-    mask = np.zeros((height, width), dtype="uint8")
-
-    # Using the bounding boxes, we will draw white boxes on the mask
-    for mask_box in boxes:
-        cv2.rectangle(mask, (mask_box[0], mask_box[1]),
-                      (mask_box[0]+mask_box[2], mask_box[1]+mask_box[3]),
-                      255, -1)
-
-    # With this mask, we will have to unidirectionally dilate so that
-    # characters within the word are connected.
-    # Kernel is used to dilate in the horizontal direction
-    #
-    # First, we need to determine the size of the kernel
-    # We need two row matrices (one is zeros and other is ones).
-    # The size of the zero kernel is relative to the width of the image
-    # while the one kernel is just +1 of the zero kernel.
-    k_1_width = int(.005 * width)
-    k_2_width = k_1_width + 1
-    kernel_1 = np.zeros((1, k_1_width), dtype="uint8")
-    kernel_2 = np.ones((1, k_2_width), dtype="uint8")
-
-    # We the combine the two kernels into one large row kernel for dilation
-    kernel = np.append(kernel_1, kernel_2)
-    kernel.shape = (1, k_1_width + k_2_width)
-
-    # With the new kernel, we dilate the mask image.
-    mask = cv2.dilate(mask, kernel, iterations=1)
-
-    # With this new mask image, we find new contours and bounding boxes.
-    _, contours, _ = cv2.findContours(mask,
-                                      cv2.RETR_EXTERNAL,
-                                      cv2.CHAIN_APPROX_SIMPLE)
-    mask_contours = sort_contours(contours, "word")
-
-    return mask_contours
-
-
 def sort_contours(contours, setting):
     """Sort the contours by x and y coordinates
      and calculate the central coordinates"""
@@ -108,6 +68,46 @@ def sort_contours(contours, setting):
 def dis(start, end):
     """Calculate the Euclidean distance in one direction"""
     return abs(start - end)
+
+
+def create_word_mask(boxes, height, width):
+    """Create a mask for our words"""
+    # Create a blank mask
+    mask = np.zeros((height, width), dtype="uint8")
+
+    # Using the bounding boxes, we will draw white boxes on the mask
+    for mask_box in boxes:
+        cv2.rectangle(mask, (mask_box[0], mask_box[1]),
+                      (mask_box[0]+mask_box[2], mask_box[1]+mask_box[3]),
+                      255, -1)
+
+    # With this mask, we will have to unidirectionally dilate so that
+    # characters within the word are connected.
+    # Kernel is used to dilate in the horizontal direction
+    #
+    # First, we need to determine the size of the kernel
+    # We need two row matrices (one is zeros and other is ones).
+    # The size of the zero kernel is relative to the width of the image
+    # while the one kernel is just +1 of the zero kernel.
+    k_1_width = int(.005 * width)
+    k_2_width = k_1_width + 1
+    kernel_1 = np.zeros((1, k_1_width), dtype="uint8")
+    kernel_2 = np.ones((1, k_2_width), dtype="uint8")
+
+    # We the combine the two kernels into one large row kernel for dilation
+    kernel = np.append(kernel_1, kernel_2)
+    kernel.shape = (1, k_1_width + k_2_width)
+
+    # With the new kernel, we dilate the mask image.
+    mask = cv2.dilate(mask, kernel, iterations=1)
+
+    # With this new mask image, we find new contours and bounding boxes.
+    _, contours, _ = cv2.findContours(mask,
+                                      cv2.RETR_EXTERNAL,
+                                      cv2.CHAIN_APPROX_SIMPLE)
+    mask_contours = sort_contours(contours, "word")
+
+    return mask_contours
 
 
 def merge_boxes(contours, height, width, setting):
@@ -248,7 +248,6 @@ if __name__ == "__main__":
 
     # Draw contours of characters in the image
     word_boxes = detector_for_words(ARGS["image"])
-    # print(word_boxes.Name)
     segmentor.segment(word_boxes.Name,
                       word_boxes.Image,
                       word_boxes.Boxes,
@@ -257,11 +256,11 @@ if __name__ == "__main__":
     for image in sorted(glob.iglob('word_*.png'), key=numerical_sort):
         char_boxes = detector_for_characters(image)
         w_image = cv2.imread(image)
-        for box in char_boxes.Boxes:
-            cv2.rectangle(w_image, (box[0], box[1]),
-                          (box[0]+box[2], box[1]+box[3]),
-                          (0, 255, 0), 1)
-        print(char_boxes.Image)
-        print(char_boxes.Boxes)
-        cv2.imshow("char", w_image)
-        cv2.waitKey(0)
+
+        # Segment / Crop the characters out
+        segmentor.segment(char_boxes.Name,
+                          w_image,
+                          char_boxes.Boxes,
+                          "char")
+
+        os.remove(image)
