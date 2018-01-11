@@ -14,6 +14,9 @@ import argparse
 from PIL import Image
 import numpy as np
 
+HEIGHT = 32
+WIDTH = 32
+
 
 def resize_images(directory):
     """
@@ -43,19 +46,46 @@ def resize_images(directory):
                 im = Image.open(image_path).convert('L')
 
                 # Grab the filename
-                filename = os.path.splitext(image_path)[0]
+                fname = os.path.splitext(image_path)[0] + '_' + label + '.png'
 
                 # Resize the image from 128 x 128 to 32 x 32
-                imResize = im.resize((32, 32), Image.LANCZOS)
+                imResize = im.resize((WIDTH, HEIGHT), Image.LANCZOS)
 
                 # Save the new image and replace the old image
-                imResize.save(filename + '.png', 'PNG')
+                imResize.save(fname, 'PNG')
 
                 # Print the progress
                 print('Resized ' + item)
 
+                # Remove the old image
+                os.remove(image_path)
+
     # Time
     print('> Completion Time: {}'.format(time.time() - start))
+
+
+def convert_to_pixel_array(image_path):
+    """
+    Convert an image into a 2D array of pixel intensities, standardized
+    and zero-centered by subtracting each pixel value by the image mean
+    and dividing it by the stardard deviation.
+    Input: Absolute image path
+    Output: Resized, normalized pixel array of the image
+    """
+    pixels = []
+
+    im = Image.open(image_path)
+    pixels = list(im.getdata())
+
+    # Normalize and zero center pixel data
+    std_dev = np.std(pixels)
+    mean = np.mean(pixels)
+
+    pixels = [(pixels[offset:offset+WIDTH] - mean)/std_dev for offset in
+              range(0, WIDTH*HEIGHT, WIDTH)]
+    pixels = np.array(pixels).astype(np.float32)
+
+    return pixels
 
 
 def generate_label_list(directory):
@@ -93,8 +123,10 @@ def generate_label_list(directory):
                 folder_dirc = os.listdir()
                 for image in folder_dirc:
                     image_path = os.path.join(folder_path, image)
-                    train_file.write(str(image_path)
-                                     + ","
+                    train_file.write(str(image) +
+                                     "," +
+                                     str(image_path) +
+                                     ","
                                      + str(label)
                                      + "\r\n")
 
@@ -105,8 +137,10 @@ def generate_label_list(directory):
                 folder_dirc = os.listdir()
                 for image in folder_dirc:
                     image_path = os.path.join(folder_path, image)
-                    test_file.write(str(image_path)
-                                    + ","
+                    test_file.write(str(image) +
+                                    "," +
+                                    str(image_path) +
+                                    ","
                                     + str(label)
                                     + "\r\n")
     # Close the files
@@ -117,11 +151,31 @@ def generate_label_list(directory):
     print('> Label files complete: {}'.format(time.time() - start))
 
 
+def pickle_data(text_file):
+    """
+    Read a text file and pickle the contents to prevent work repeat
+    Input: Text file containing the filename, absolute image path, label
+    Output: Pickled file of the character data
+    """
+    with open(text_file) as train:
+        for line in train:
+            print(line)
+
+
+def load_data(directory):
+    for root, dirnames, filenames in os.walk(directory):
+        print(root)
+        print(dirnames)
+        print(filenames)
+
+
 if __name__ == "__main__":
     # Build up the argument to bring in an image
     AP = argparse.ArgumentParser()
-    AP.add_argument("-d", "--directory", required=True, help="path to dataset")
+    AP.add_argument("-d", "--directory", help="path to dataset")
+    AP.add_argument("-t", "--text", help="path to text_file")
     ARGS = vars(AP.parse_args())
 
-    #resize_images(ARGS["directory"])
+    resize_images(ARGS["directory"])
     generate_label_list(ARGS["directory"])
+    #pickle_data(ARGS["text"])
