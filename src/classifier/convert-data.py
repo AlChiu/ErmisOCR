@@ -151,15 +151,25 @@ def generate_label_list(directory):
     print('> Label files complete: {}'.format(time.time() - start))
 
 
-def pickle_data(text_file):
+def pickle_data(text_file, datafile):
     """
     Read a text file and pickle the contents to prevent work repeat
     Input: Text file containing the filename, absolute image path, label
     Output: Pickled file of the character data
     """
+    point = {}
+    char_data = []
+    start = time.time()
     with open(text_file) as train:
         for line in train:
-            print(line)
+            v = line.strip().split(',')
+            point['filename'] = v[0]
+            point['image_path'] = v[1]
+            point['label'] = v[2]
+            point['pixel_array'] = convert_to_pixel_array(v[1])
+            char_data.append(point)
+    pickle.dump(char_data, open(datafile, "wb"))
+    print("> Pickle time: {}".format(time.time() - start))
 
 
 def load_data(directory):
@@ -176,6 +186,6 @@ if __name__ == "__main__":
     AP.add_argument("-t", "--text", help="path to text_file")
     ARGS = vars(AP.parse_args())
 
-    resize_images(ARGS["directory"])
-    generate_label_list(ARGS["directory"])
-    #pickle_data(ARGS["text"])
+    # resize_images(ARGS["directory"])
+    # generate_label_list(ARGS["directory"])
+    pickle_data(ARGS["text"], 'training_set.p')
