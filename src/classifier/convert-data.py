@@ -4,18 +4,17 @@ We use the NIST SD19 by_class dataset
 """
 import os
 import time
-import shutil
-import binascii
-import glob
-import re
 import pickle
-import configparser
+import collections
 import argparse
 from PIL import Image
 import numpy as np
 
 HEIGHT = 32
 WIDTH = 32
+LABELFILES = collections.namedtuple('Label_Files', ['Directory',
+                                                    'Training',
+                                                    'Testing'])
 
 
 def resize_images(directory):
@@ -62,6 +61,7 @@ def resize_images(directory):
 
     # Time
     print('> Completion Time: {}'.format(time.time() - start))
+    return directory
 
 
 def convert_to_pixel_array(image_path):
@@ -81,8 +81,13 @@ def convert_to_pixel_array(image_path):
     std_dev = np.std(pixels)
     mean = np.mean(pixels)
 
+    # Each pixel will have the image mean substracted from it.
+    # Then divide the result by the image standard deviation.
+    # Replace that result as the new pixel value
     pixels = [(pixels[offset:offset+WIDTH] - mean)/std_dev for offset in
               range(0, WIDTH*HEIGHT, WIDTH)]
+
+    # Convert the pixel list into a numpy array
     pixels = np.array(pixels).astype(np.float32)
 
     return pixels
@@ -130,7 +135,7 @@ def generate_label_list(directory):
                                      + str(label)
                                      + "\r\n")
 
-            # Wrote tp the testing file
+            # Write to the testing file
             if folder == 'testing':
                 folder_path = os.path.join(label_path, folder)
                 os.chdir(folder_path)
@@ -150,33 +155,86 @@ def generate_label_list(directory):
     # Time
     print('> Label files complete: {}'.format(time.time() - start))
 
+    # Return the root dataset directory, training file name, and
+    # testing file name
+    result = LABELFILES(directory, training_file_name, test_file_name)
+    return result
 
-def pickle_data(text_file, datafile):
+
+def pickle_data(directory, text_file, datafile):
     """
     Read a text file and pickle the contents to prevent work repeat
     Input: Text file containing the filename, absolute image path, label
     Output: Pickled file of the character data
     """
+    # Point is a set that contains the image file name, its path,
+    # the label, and the actual image pixel array.
     point = {}
+
+    # Char_data is the list of all points from the label text file
     char_data = []
+
     start = time.time()
-    with open(text_file) as train:
-        for line in train:
-            v = line.strip().split(',')
-            point['filename'] = v[0]
-            point['image_path'] = v[1]
-            point['label'] = v[2]
-            point['pixel_array'] = convert_to_pixel_array(v[1])
-            char_data.append(point)
-    pickle.dump(char_data, open(datafile, "wb"))
-    print("> Pickle time: {}".format(time.time() - start))
+
+    # First, change to the dataset root directory
+    os.chdir(directory)
+
+    try:
+        # Open the text file
+        with open(text_file) as train:
+            for line in train:
+                # Remove the new line character from each line
+                v = line.strip().split(',')
+
+                # Filename is the first element of the set
+                point['filename'] = v[0]
+
+                # Image path is the second element
+                point['image_path'] = v[1]
+
+                # Image label is the thrid element
+                point['label'] = v[2]
+
+                # Converted image pixel array is the last element of the set
+                point['pixel_array'] = convert_to_pixel_array(v[1])
+
+                # Append the set to the list
+                char_data.append(point)
+
+        # The complete list is then pickled into the specified filename
+        pickle.dump(char_data, open(datafile, "wb"),
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        print("> Pickle time: {}".format(time.time() - start))
+
+        # Return the pickle file name
+        return datafile
+
+    # Throw an error if we can't find the text file
+    except FileNotFoundError:
+        print('Label file not found at path {}'.format(directory))
 
 
-def load_data(directory):
-    for root, dirnames, filenames in os.walk(directory):
-        print(root)
-        print(dirnames)
-        print(filenames)
+def load_data(directory, datafile):
+    """
+    Function to load a pickled datafile and return its contents
+    Input: Directory to the pickle file, Pickle filename
+    Output: Contents of specified pickle file
+    """
+    # Change to the specified directory
+    os.chdir(directory)
+
+    try:
+        # Load the pickled file
+        data = pickle.load(open(datafile, "rb"))
+
+        # Return the contents
+        print('Data loaded from {}'.format(datafile))
+        return data
+
+    # Throw an error if we can't find the pickle file
+    except FileNotFoundError:
+        print('Pickle file {} not found at path {}'
+              .format(datafile, directory))
 
 
 if __name__ == "__main__":
@@ -186,6 +244,31 @@ if __name__ == "__main__":
     AP.add_argument("-t", "--text", help="path to text_file")
     ARGS = vars(AP.parse_args())
 
-    # resize_images(ARGS["directory"])
-    # generate_label_list(ARGS["directory"])
-    pickle_data(ARGS["text"], 'training_set.p')
+    #############################
+    # Main pipeline test
+    #############################
+
+    # First, resize the images
+    resize_path = resize_images(ARGS['directory'])
+
+    # # Second, generate the label text files
+    labels_path = generate_label_list(resize_path)
+
+    # # Pickle the data
+    train_pickle = pickle_data(labels_path.Directory,
+                               labels_path.Training,
+                               "trainingg_set.p")
+
+    test_pickle = pickle_data(labels_path.Directory,
+                              labels_path.Testing,
+                              "testing_set.p")
+
+    # Load the pickle data
+    train = load_data(labels_path.Directory, train_pickle)
+    test = load_data(labels_path.Directory, test_pickle)
+
+    for entry in train:
+        print(entry)
+
+    for entry in test:
+        print(entry)
