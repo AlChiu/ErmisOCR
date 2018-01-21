@@ -3,9 +3,11 @@ Configure the file structure of the NIST by_class directory
 (RUN ONLY ONCE)
 """
 import os
+import pathlib
 import shutil
 import binascii
 import argparse
+import time
 
 
 # First we need to process the NIST by_class dataset
@@ -58,6 +60,79 @@ def NIST_by_class(directory):
         b = os.path.splitext(name)[0]
         a = (binascii.unhexlify(b)).decode("ascii")
         shutil.move(name, a)
+
+
+def split_NIST(directory, division):
+    """
+    Split the restructured dataset into n subsets
+    This function assumes that you already ran the NIST_by_class function
+    """
+    start = time.time()
+    # Change directory and list out the labels
+    os.chdir(directory)
+    pardir = os.path.abspath(os.pardir)
+    dataset = "NIST_split"
+
+    # Create the split dataset parent directory
+    split_path = os.path.join(pardir, dataset)
+    pathlib.Path(split_path).mkdir(parents=True, exist_ok=True)
+
+    labels = os.listdir()
+
+    for label in labels:
+        # Create the label paths
+        label_path = os.path.join(directory, label)
+
+        # Go to the label directory
+        os.chdir(label_path)
+
+        # List out the testing and training directories
+        test_train = os.listdir()
+
+        for image_set in test_train:
+            # Create the training and testing directory for each label
+            images_path = os.path.join(label_path, image_set)
+
+            # Change to that directory
+            os.chdir(images_path)
+
+            # List out the images and count the number per label
+            image_files = os.listdir()
+            num_files = len(image_files)
+
+            # Divide the count by the number of subsets we want
+            subset_count = int(round(num_files / division, 0))
+
+            count = 0
+            while count < division:
+                if count == division - 1:
+                    newlist = image_files[count * subset_count:]
+
+                # Create a a list of subdivided images
+                newlist = image_files[count * subset_count:
+                                      count * subset_count + subset_count]
+
+                # Create the directory to house the subset of images
+                subset = "subset_" + str(count)
+                subset_path = os.path.join(split_path,
+                                           subset,
+                                           label,
+                                           image_set)
+                pathlib.Path(subset_path).mkdir(parents=True,
+                                                exist_ok=True)
+                # Move the divided images into the new subsets
+                for image in newlist:
+                    og_image_path = os.path.join(images_path, image)
+                    new_image_path = os.path.join(subset_path, image)
+                    shutil.move(og_image_path, new_image_path)
+                    print('{} moved to {}'.format(og_image_path,
+                                                  new_image_path))
+
+                count += 1
+            print('{} has {} images, and each subset will have {} images'
+                  .format(images_path, num_files, subset_count))
+    print('> Completion time: {}'.format(time.time() - start))
+    return split_path, division
 
 
 if __name__ == "__main__":
