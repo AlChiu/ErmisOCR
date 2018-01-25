@@ -11,7 +11,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.pooling import MaxPooling2D
 from keras.models import Sequential
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = 3
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore')
 
 # Hyperparameters
