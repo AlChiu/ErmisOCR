@@ -21,7 +21,8 @@ LABELS = {
     '5': 5,
     '6': 6,
     '7': 7,
-    '8': 9,
+    '8': 8,
+    '9': 9,
     'a': 10,
     'b': 11,
     'c': 12,
@@ -248,8 +249,8 @@ def pickle_data(directory, text_file_no, datafile, setting):
                     # Remove the new line character from each line
                     text_line = line.strip().split(',')
                     image = convert_to_pixel_array(text_line[1])
-                    text_line[2] = LABELS.get(text_line[2])
                     text_line.append(image)
+                    text_line.append(LABELS.get(str(text_line[2])))
                     char_data.append(text_line)
             pickle.dump(char_data, open(datafile, "wb"),
                         protocol=pickle.HIGHEST_PROTOCOL)
