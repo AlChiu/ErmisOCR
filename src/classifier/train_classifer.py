@@ -13,6 +13,9 @@ from keras import backend as K
 import model
 import convert_data
 
+HEIGHT = 32
+WIDTH = 32
+
 
 def create_feed_data(directory, train_pkl_no, test_pkl_no):
     """
@@ -27,14 +30,6 @@ def create_feed_data(directory, train_pkl_no, test_pkl_no):
             3) test_img - list of test image arrays
             4) test_lbl - list of test image lables
     """
-    # First, we must use the provided directory to find
-    # the pickled files by creating the file path.
-    training_pkl = "train_pickle_" + str(train_pkl_no) + ".pkl"
-    test_pkl = "test_pickle_" + str(test_pkl_no) + ".pkl"
-
-    train_path = os.path.join(directory, training_pkl)
-    test_path = os.path.join(directory, test_pkl)
-
     # Create the lists
     train_img = []
     train_lbl = []
@@ -57,24 +52,25 @@ def create_feed_data(directory, train_pkl_no, test_pkl_no):
         # Create the four new lists
         for line in train_data:
             train_img.append(line[3])
-            train_lbl.append(line[2])
+            train_lbl.append(line[4])
+            # train_lbl.append(keras.utils.to_categorical(line[2], 62))
 
         for line in test_data:
             test_img.append(line[3])
-            test_lbl.append(line[2])
-
-        print(train_img[0])
-        print(train_lbl[0])
-        print(test_img[0])
-        print(test_lbl[0])
+            test_lbl.append(line[4])
+            # test_lbl.append(keras.utils.to_categorical(line[2], 62))
 
         # Reshape and create one-hot vectors for labels
         print('{} training images and {} testing images'.format(len(train_img),
                                                                 len(test_img)))
-        # train_lbl = keras.utils.to_categorical(train_lbl, 62)
-        # test_lbl = keras.utils.to_categorical(test_lbl, 62)
-        # print(train_lbl[0])
-        # print(test_lbl[0])
+
+        train_img = np.array(train_img)
+        train_lbl = keras.utils.to_categorical(train_lbl, 62)
+        test_img = np.array(test_img)
+        test_lbl = keras.utils.to_categorical(test_lbl, 62)
+
+        train_img = train_img.reshape(train_img.shape[0], HEIGHT, WIDTH, 1)
+        test_img = test_img.reshape(test_img.shape[0], HEIGHT, WIDTH, 1)
 
     except FileNotFoundError:
         print('Pickle files were not found in {}'.format(directory))
