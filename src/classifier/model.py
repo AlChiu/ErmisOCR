@@ -17,16 +17,14 @@ warnings.filterwarnings('ignore')
 # Hyperparameters
 DROPOUT = 0.5
 STRIDES = 2
-HEIGHT = 128
-WIDTH = 128
-KERNEL_SIZE_1 = [5, 5]
-KERNEL_SIZE_2 = [3, 3]
+HEIGHT = 32
+WIDTH = 32
+KERNEL_SIZE_1 = [3, 3]
+KERNEL_SIZE_2 = [1, 1]
 POOL_SIZE = (2, 2)
 CONV1_FILTERS = 64
 CONV2_FILTERS = 128
 CONV3_FILTERS = 256
-CONV4_FILTERS = 512
-CONV5_FILTERS = 512
 NEURON_UNITS = 100
 
 
@@ -70,32 +68,6 @@ def build_model():
     model.add(Activation('relu'))
 
     # Pooling Layer 3
-    model.add(MaxPooling2D(
-        pool_size=POOL_SIZE,
-        strides=STRIDES))
-
-    # Convolutional Layer 4
-    model.add(Conv2D(
-        filters=CONV4_FILTERS,
-        kernel_size=KERNEL_SIZE_2,
-        padding="same"))
-    BatchNormalization(axis=-1)
-    model.add(Activation('relu'))
-
-    # Pooling Layer 4
-    model.add(MaxPooling2D(
-        pool_size=POOL_SIZE,
-        strides=STRIDES))
-
-    # Convolutional Layer 5
-    model.add(Conv2D(
-        filters=CONV5_FILTERS,
-        kernel_size=KERNEL_SIZE_2,
-        padding="same"))
-    BatchNormalization(axis=-1)
-    model.add(Activation('relu'))
-
-    # Pooling Layer 5
     model.add(MaxPooling2D(
         pool_size=POOL_SIZE,
         strides=STRIDES))
