@@ -5,9 +5,9 @@ return and save the model as a .h5 file
 """
 import os
 from pathlib import Path
-import matplotlib.pyplot as plt
 import random
 import argparse
+import matplotlib.pyplot as plt
 import numpy as np
 import keras
 from keras.models import load_model
@@ -150,27 +150,27 @@ if __name__ == "__main__":
 
     COUNT = 0
     while COUNT < DIVISION:
-        train_img, train_lbl, test_img, test_lbl = create_feed_data(DIRECTORY,
+        TRAIN_IMG, TRAIN_LBL, TEST_IMG, TEST_LBL = create_feed_data(DIRECTORY,
                                                                     COUNT,
                                                                     COUNT)
         MODEL_FILE = Path(MODEL_DIRECTORY)
         if MODEL_FILE.is_file():
-            char_model = load_model(MODEL_DIRECTORY)
-            history = fit_model(char_model,
-                                train_img,
-                                train_lbl,
-                                test_img,
-                                test_lbl,
+            CHAR_MODEL = load_model(MODEL_DIRECTORY)
+            HISTORY = fit_model(CHAR_MODEL,
+                                TRAIN_IMG,
+                                TRAIN_LBL,
+                                TEST_IMG,
+                                TEST_LBL,
                                 MODEL_DIRECTORY)
             # plot(history, "accuracy", COUNT)
             # plot(history, "loss", COUNT)
         else:
-            char_model = build_model()
-            history = fit_model(char_model,
-                                train_img,
-                                train_lbl,
-                                test_img,
-                                test_lbl,
+            CHAR_MODEL = build_model()
+            HISTORY = fit_model(CHAR_MODEL,
+                                TRAIN_IMG,
+                                TRAIN_LBL,
+                                TEST_IMG,
+                                TEST_LBL,
                                 MODEL_DIRECTORY)
             # plot(history, "accuracy", COUNT)
             # plot(history, "loss", COUNT)
