@@ -16,8 +16,8 @@ import model
 import convert_data
 
 HISTORY = History()
-HEIGHT = 32
-WIDTH = 32
+HEIGHT = 28
+WIDTH = 28
 DIVISION = 10
 BATCH_SIZE = 200
 EPOCHS = 50
@@ -85,10 +85,20 @@ def create_feed_data(directory, train_pkl_no, test_pkl_no):
     return train_img, train_lbl, test_img, test_lbl
 
 
-def build_model():
+def build_model(setting):
     """Build the Keras neural network"""
     print("> Building Keras neural network...")
-    network_model = model.build_model()
+    if setting == "1":
+        network_model = model.build_model_1()
+    elif setting == "2":
+        network_model = model.build_model_2()
+    elif setting == "3":
+        network_model = model.build_model_3()
+    elif setting == "4":
+        network_model = model.build_model_4()
+    elif setting == "5":
+        network_model = model.build_model_5()
+
     return network_model
 
 
@@ -103,8 +113,7 @@ def fit_model(model, train_img, train_lbl, test_img, test_lbl, name):
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         verbose=1,
-        validation_data=(test_img, test_lbl),
-        callbacks=[HISTORY]
+        validation_data=(test_img, test_lbl)
     )
 
     score = model.evaluate(test_img, test_lbl, verbose=0)
@@ -139,12 +148,14 @@ if __name__ == "__main__":
     AP = argparse.ArgumentParser()
     AP.add_argument("-d", "--directory", help="path to dataset")
     AP.add_argument("-t", "--text", help="path to text_file")
+    AP.add_argument("-s", "--setting", help="model number to train")
     ARGS = vars(AP.parse_args())
 
     #############################
     # Feed Test
     #############################
-    MODEL_NAME = 'model_62char.h5'
+    MODEL_NAME = 'model_62char_' + str(ARGS['setting']) + '.h5'
+    SETTING = ARGS['setting']
     DIRECTORY = ARGS['directory']
     MODEL_DIRECTORY = os.path.join(DIRECTORY, MODEL_NAME)
 
@@ -153,6 +164,7 @@ if __name__ == "__main__":
         TRAIN_IMG, TRAIN_LBL, TEST_IMG, TEST_LBL = create_feed_data(DIRECTORY,
                                                                     COUNT,
                                                                     COUNT)
+
         MODEL_FILE = Path(MODEL_DIRECTORY)
         if MODEL_FILE.is_file():
             CHAR_MODEL = load_model(MODEL_DIRECTORY)
@@ -165,7 +177,7 @@ if __name__ == "__main__":
             # plot(history, "accuracy", COUNT)
             # plot(history, "loss", COUNT)
         else:
-            CHAR_MODEL = build_model()
+            CHAR_MODEL = build_model(SETTING)
             HISTORY = fit_model(CHAR_MODEL,
                                 TRAIN_IMG,
                                 TRAIN_LBL,
