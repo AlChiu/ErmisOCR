@@ -4,14 +4,17 @@ We use the NIST SD19 by_class dataset
 """
 import os
 import time
+import math
 import pickle
 import argparse
+import cv2
 from PIL import Image
+from scipy import ndimage
 import numpy as np
 import nist_by_class
 
-HEIGHT = 32
-WIDTH = 32
+HEIGHT = 28
+WIDTH = 28
 LABELS = {
     '0': 0,
     '1': 1,
@@ -78,6 +81,31 @@ LABELS = {
 }
 
 
+def getBestShiftAmount(img):
+    """
+    Using scipy, we can calculate the center of mass of
+    the input image and return the best shift amount to
+    center an image on the character.
+    """
+    center_y, center_x = ndimage.measurements.center_of_mass(img)
+
+    rows, columns = img.shape
+    shift_x = np.round(columns/2.0 - center_x).astype(int)
+    shift_y = np.round(rows/2.0 - center_y).astype(int)
+
+    return shift_x, shift_y
+
+
+def shift(img, sft_x, sft_y):
+    """
+    Shift the input image by sft_x and sft_y pixels
+    """
+    rows, columns = img.shape
+    trans_M = np.float32([[1, 0, sft_x], [0, 1, sft_y]])
+    shifted_image = cv2.warpAffine(img, trans_M, (columns, rows))
+    return shifted_image
+
+
 def resize_images(directory):
     """
     Resize NIST images down to 32 x 32
@@ -102,25 +130,66 @@ def resize_images(directory):
                 image_path = os.path.join(data_path, item)
 
                 # Open the image and convert to grayscale
-                image = Image.open(image_path).convert('L')
-                width, height = image.size
+                image = cv2.imread(image_path, 0)
+                width, height = image.shape
 
                 # Grab the filename
                 fname = os.path.splitext(image_path)[0] + '_' + label + '.png'
 
                 if width != WIDTH | height != HEIGHT:
-                    # Resize the image from 128 x 128 to 32 x 32
-                    resized_image = image.resize((WIDTH, HEIGHT),
-                                                 Image.LANCZOS)
+                    # Resize the image from 128 x 128 to 28 x 28 using
+                    # Lecun's method seen in the MNIST dataset
 
-                    # Save the new image and replace the old image
-                    resized_image.save(fname, 'PNG')
+                    (thresh, image) = cv2.threshold(image, 127, 255,
+                                                    cv2.THRESH_BINARY_INV |
+                                                    cv2.THRESH_OTSU)
 
-                    # Print the progress
-                    print('Resized ' + item)
+                    # Remove rows and columns that are all black
+                    while np.sum(image[0]) == 0:
+                        image = image[1:]
 
-                    # Remove the old image
+                    while np.sum(image[:, 0]) == 0:
+                        image = np.delete(image, 0, 1)
+
+                    while np.sum(image[-1]) == 0:
+                        image = image[:-1]
+
+                    while np.sum(image[: -1]) == 0:
+                        image = np.delete(image, -1, 1)
+
+                    rows, cols = image.shape
+
+                    # Resize the resulting image into a 20 x 20 image
+                    # while maintaining the aspect ratio
+                    if rows > cols:
+                        factor = 20.0 / rows
+                        rows = 20
+                        cols = int(round(cols * factor))
+                    else:
+                        factor = 20.0 / cols
+                        cols = 20
+                        rows = int(round(rows * factor))
+                    image = cv2.resize(image, (cols, rows))
+
+                    # Pad the 20 x 20 so that it is now 28 x 28
+                    column_padding = (int(math.ceil((28-cols)/2.0)),
+                                      int(math.ceil((28-cols)/2.0)))
+                    row_padding = (int(math.ceil((28-rows)/2.0)),
+                                   int(math.ceil((28-rows)/2.0)))
+                    image = np.lib.pad(image,
+                                       (row_padding, column_padding),
+                                       'constant')
+
+                    # Center the character in this new image
+                    x_shift, y_shift = getBestShiftAmount(image)
+                    shifted = shift(image, x_shift, y_shift)
+                    image = shifted
+
+                    # Save the image
+                    image = cv2.bitwise_not(image)
+                    cv2.imwrite(fname, image)
                     os.remove(image_path)
+                    print('{} resized'.format(item))
 
                 else:
                     print(item + ' is already the correct size')
