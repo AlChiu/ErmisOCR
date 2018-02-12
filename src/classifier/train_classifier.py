@@ -129,6 +129,7 @@ if __name__ == "__main__":
     AP = argparse.ArgumentParser()
     AP.add_argument("-d", "--directory", help="path to dataset")
     AP.add_argument("-t", "--text", help="path to text_file")
+    AP.add_argument("-s", "--subset", help="subset number (0-9)")
     ARGS = vars(AP.parse_args())
 
     #############################
@@ -136,32 +137,30 @@ if __name__ == "__main__":
     #############################
     MODEL_NAME = 'model_62char.h5'
     DIRECTORY = ARGS['directory']
+    SUBSET_NO = ARGS['subset']
     MODEL_DIRECTORY = os.path.join(DIRECTORY, MODEL_NAME)
 
-    COUNT = 0
-    while COUNT < DIVISION:
-        TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST = create_feed_data(DIRECTORY,
-                                                                  COUNT)
-        # create_feed_data(DIRECTORY, COUNT)
-        MODEL_FILE = Path(MODEL_DIRECTORY)
-        if MODEL_FILE.is_file():
-            CHAR_MODEL = load_model(MODEL_DIRECTORY)
-            HISTORY = fit_model(CHAR_MODEL,
-                                TRAIN_GEN,
-                                TEST_GEN,
-                                NO_TRAIN,
-                                NO_TEST,
-                                MODEL_DIRECTORY)
-            # plot(history, "accuracy", COUNT)
-            # plot(history, "loss", COUNT)
-        else:
-            CHAR_MODEL = build_model()
-            HISTORY = fit_model(CHAR_MODEL,
-                                TRAIN_GEN,
-                                TEST_GEN,
-                                NO_TRAIN,
-                                NO_TEST,
-                                MODEL_DIRECTORY)
-            # plot(history, "accuracy", COUNT)
-            # plot(history, "loss", COUNT)
-        COUNT += 1
+    TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST = create_feed_data(DIRECTORY,
+                                                              SUBSET_NO)
+    # create_feed_data(DIRECTORY, COUNT)
+    MODEL_FILE = Path(MODEL_DIRECTORY)
+    if MODEL_FILE.is_file():
+        CHAR_MODEL = load_model(MODEL_DIRECTORY)
+        HISTORY = fit_model(CHAR_MODEL,
+                            TRAIN_GEN,
+                            TEST_GEN,
+                            NO_TRAIN,
+                            NO_TEST,
+                            MODEL_DIRECTORY)
+        # plot(history, "accuracy", COUNT)
+        # plot(history, "loss", COUNT)
+    else:
+        CHAR_MODEL = build_model()
+        HISTORY = fit_model(CHAR_MODEL,
+                            TRAIN_GEN,
+                            TEST_GEN,
+                            NO_TRAIN,
+                            NO_TEST,
+                            MODEL_DIRECTORY)
+        # plot(history, "accuracy", COUNT)
+        # plot(history, "loss", COUNT)
