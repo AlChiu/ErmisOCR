@@ -71,7 +71,7 @@ def split_NIST(directory, division):
     # Change directory and list out the labels
     os.chdir(directory)
     pardir = os.path.abspath(os.pardir)
-    dataset = "NIST_split"
+    dataset = "NIST_SPLIT_224"
 
     # Create the split dataset parent directory
     split_path = os.path.join(pardir, dataset)
@@ -116,8 +116,8 @@ def split_NIST(directory, division):
                 subset = "subset_" + str(count)
                 subset_path = os.path.join(split_path,
                                            subset,
-                                           label,
-                                           image_set)
+                                           image_set,
+                                           label)
                 pathlib.Path(subset_path).mkdir(parents=True,
                                                 exist_ok=True)
                 # Move the divided images into the new subsets
