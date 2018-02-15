@@ -1,10 +1,9 @@
 """
 Classifier class definition
 """
-import math
-import cv2
+import argparse
 import numpy as np
-from scipy import ndimage
+import cv2
 from keras.models import load_model
 import convert_data
 
@@ -85,7 +84,7 @@ class Classifier:
         specified trained neural network model.
         """
         if model is not None:
-            self.model = model
+            self.model = load_model(model)
         elif model_path is not None:
             self.model = load_model(model_path)
         else:
@@ -94,28 +93,47 @@ class Classifier:
     def preprocess(self, image_path):
         """
         Function to preprocess the test image the same
-        way that produces the MNIST 28x28 image.
+        way that produces the MNIST 28x28 image, just
+        at 224 x 224.
         """
-        print('preprocessing')
+        image = cv2.imread(image_path, 0)
+        image = convert_data.resize_shift(image)
+        image = cv2.normalize(image, None, alpha=0, beta=255,
+                              norm_type=cv2.NORM_MINMAX)
+        image = cv2.resize(image, (224, 224))
+        image = np.asarray(image, dtype=np.float32)
+        cv2.imshow("letter", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        return image
 
     def classify(self, image_path):
         """
         Attempt to predict and classify. Return an array of the
         top 5 resulting predictions with confidence levels.
         """
-        try:
-            image_array = convert_data.convert_to_pixel_array(image_path)
-            image_array = np.array(image_array)
-            input_image = np.array([image_array])
-            input_image = input_image.reshape(input_image.size[0], 32, 32, 1)
+        # First, preprocess the image so that it is similar to
+        # MNIST images at 224 x 224
+        image = self.preprocess(image_path)
+        image = image.reshape(-1, 224, 224, 1)
+        outp = np.array(self.model.predict(image)[0])
 
-            prediction = self.model.predict(input_image)[0]
-            prediction = np.array(prediction)
+        top5_idx = outp.argsort()[-5:]
+        top5_chars = []
+        for char in top5_idx:
+            top5_chars.append([CHAR_LABELS.get(char), outp[char]])
 
-            top5_array = prediction.argsort()[-5:]
+        top5_chars = sorted(top5_chars, key=lambda x: x[1], reverse=True)
 
-            print(top5_array)
+        print(top5_chars)
 
-            return top5_array
-        except FileNotFoundError:
-            print('Cannot find the image file.')
+
+if __name__ == "__main__":
+    # Build the argument to load in the image
+    AP = argparse.ArgumentParser()
+    AP.add_argument("-i", "--image", help="singular image path")
+    ARGS = vars(AP.parse_args())
+
+    # Create the classifier
+    classifier = Classifier(model='model_62char.h5')
+    classifier.classify(ARGS['image'])
