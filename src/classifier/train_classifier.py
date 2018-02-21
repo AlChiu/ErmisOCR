@@ -5,14 +5,10 @@ return and save the model as a .h5 file
 """
 import os
 from pathlib import Path
-# import random
 import argparse
 import matplotlib.pyplot as plt
-# import numpy as np
-# import keras
-# import cv2
 from keras.models import load_model
-from keras.callbacks import History
+from keras.callbacks import History, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
 import model
 
@@ -20,8 +16,8 @@ HISTORY = History()
 HEIGHT = 224
 WIDTH = 224
 DIVISION = 10
-BATCH_SIZE = 50
-EPOCHS = 10
+BATCH_SIZE = 32
+EPOCHS = 15
 
 
 def create_feed_data(directory, text_no):
@@ -58,7 +54,7 @@ def create_feed_data(directory, text_no):
 
     # Data augmentation
     train_datagen = ImageDataGenerator(
-        rescale=1. / 255.,
+        rescale=1. / 255,
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True)
@@ -84,7 +80,7 @@ def create_feed_data(directory, text_no):
 def build_model():
     """Build the Keras neural network"""
     print("> Building Keras neural network...")
-    network_model = model.VGG16_Char()
+    network_model = model.mobile_net()
     return network_model
 
 
@@ -93,12 +89,20 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
     Train the neural network with batch size of 200, 100 epochs,
     and print out training progress.
     """
+    tensorboard = TensorBoard(log_dir='./logs',
+                              histogram_freq=0,
+                              write_graph=True,
+                              write_images=False)
+    filename = 'weights.{epoch:02d}-{val_loss:.2f}-sub{no_train}.hdf5'
+    checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
+
     model.fit_generator(
         train_gen,
         steps_per_epoch=no_train // BATCH_SIZE,
         epochs=EPOCHS,
         validation_data=test_gen,
-        validation_steps=no_test // BATCH_SIZE
+        validation_steps=no_test // BATCH_SIZE,
+        callbacks=[tensorboard, checkpointer]
     )
 
     model.save(name)
