@@ -78,14 +78,12 @@ class Classifier:
     Defines the classifier for image prediction.
     Needs a trained neural model to function properly.
     """
-    def __init__(self, model=None, model_path=None):
+    def __init__(self, model_path):
         """
         Initialize the character classifier with the
         specified trained neural network model.
         """
-        if model is not None:
-            self.model = load_model(model)
-        elif model_path is not None:
+        if model_path is not None:
             self.model = load_model(model_path)
         else:
             raise ValueError('Either model or model_path must be given')
@@ -116,7 +114,7 @@ class Classifier:
         # MNIST images at 224 x 224
         image = self.preprocess(image_path)
         image = image.reshape(-1, 224, 224, 1)
-        outp = np.array(self.model.predict(image)[0])
+        outp = self.model.predict(image)
 
         top5_idx = outp.argsort()[-5:]
         top5_chars = []
@@ -132,8 +130,9 @@ if __name__ == "__main__":
     # Build the argument to load in the image
     AP = argparse.ArgumentParser()
     AP.add_argument("-i", "--image", help="singular image path")
+    AP.add_argument("-p", "--path", help="model path")
     ARGS = vars(AP.parse_args())
 
     # Create the classifier
-    classifier = Classifier(model='model_62char.h5')
+    classifier = Classifier(ARGS['path'])
     classifier.classify(ARGS['image'])

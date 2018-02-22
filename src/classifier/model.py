@@ -23,6 +23,8 @@ def VGG16_Char():
     # BLOCK 1
     model.add(Conv2D(32, (3, 3), input_shape=(224, 224, 1),
               padding='same', name='blk1_conv1'))
+    model.add(Conv2D(64, (3, 3), input_shape=(224, 224, 1),
+                     padding='same', name='blk1_conv1'))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(Conv2D(32, (3, 3), padding='same', name='blk1_conv2'))
