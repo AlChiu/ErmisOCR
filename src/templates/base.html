@@ -1,0 +1,12 @@
+<!doctype html>
+    <head>
+        {% if title %}
+        <title>{{ title }} - ErmisOCR</title>
+        {% else %}
+        <title>Welcome to ErmisOCR</title>
+        {% endif %}
+    </head>
+    <body>   
+        {% block content %}{% endblock %}
+    </body>
+</html>
