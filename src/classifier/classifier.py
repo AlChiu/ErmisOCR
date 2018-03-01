@@ -2,10 +2,8 @@
 Classifier class definition
 """
 import argparse
-import numpy as np
 import cv2
 from keras.models import load_model
-import convert_data
 
 CHAR_LABELS = {
     0: '0',
@@ -78,15 +76,15 @@ class Classifier:
     Defines the classifier for image prediction.
     Needs a trained neural model to function properly.
     """
-    def __init__(self, model_path):
+    def __init__(self, model):
         """
         Initialize the character classifier with the
         specified trained neural network model.
         """
-        if model_path is not None:
-            self.model = load_model(model_path)
+        if model is not None:
+            self.model = load_model(model)
         else:
-            raise ValueError('Either model or model_path must be given')
+            raise ValueError('A trained model must be provided.')
 
     def preprocess(self, image_path):
         """
@@ -95,11 +93,13 @@ class Classifier:
         at 224 x 224.
         """
         image = cv2.imread(image_path, 0)
-        image = convert_data.resize_shift(image)
-        image = cv2.normalize(image, None, alpha=0, beta=255,
-                              norm_type=cv2.NORM_MINMAX)
+        (_, image) = cv2.threshold(image, 127, 255,
+                                   cv2.THRESH_BINARY_INV |
+                                   cv2.THRESH_OTSU)
         image = cv2.resize(image, (224, 224))
-        image = np.asarray(image, dtype=np.float32)
+        image = cv2.normalize(image, None, alpha=0, beta=1,
+                              norm_type=cv2.NORM_MINMAX,
+                              dtype=cv2.CV_32F)
         cv2.imshow("letter", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -114,23 +114,22 @@ class Classifier:
         # MNIST images at 224 x 224
         image = self.preprocess(image_path)
         image = image.reshape(-1, 224, 224, 1)
-        outp = self.model.predict(image)
+        outp = self.model.predict(image)[0]
 
-        top5_idx = outp.argsort()[-5:]
-        top5_chars = []
+        top5_idx = (-outp).argsort()[:1]
+
         for char in top5_idx:
-            top5_chars.append([CHAR_LABELS.get(char), outp[char]])
+            character = CHAR_LABELS.get(char)
+            print(character)
 
-        top5_chars = sorted(top5_chars, key=lambda x: x[1], reverse=True)
-
-        print(top5_chars)
+        return character
 
 
 if __name__ == "__main__":
     # Build the argument to load in the image
     AP = argparse.ArgumentParser()
     AP.add_argument("-i", "--image", help="singular image path")
-    AP.add_argument("-p", "--path", help="model path")
+    AP.add_argument("-p", "--path", help="model")
     ARGS = vars(AP.parse_args())
 
     # Create the classifier
