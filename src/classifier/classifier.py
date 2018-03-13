@@ -1,9 +1,12 @@
 """
 Classifier class definition
 """
+import os
+import glob
 import argparse
 import cv2
 from keras.models import load_model
+from src.detector import char_detect_segment as det_seg
 
 CHAR_LABELS = {
     0: '0',
@@ -71,6 +74,34 @@ CHAR_LABELS = {
 }
 
 
+def preprocess(image_path):
+    """
+    Function to preprocess the test image the same
+    way that produces the MNIST 28x28 image, just
+    at 224 x 224.
+    """
+    image = cv2.imread(image_path, 0)
+    (_, image) = cv2.threshold(image, 0, 255,
+                               cv2.THRESH_BINARY_INV |
+                               cv2.THRESH_OTSU)
+    image = cv2.resize(image, (224, 224))
+    image = cv2.normalize(image, None, alpha=0, beta=1,
+                          norm_type=cv2.NORM_MINMAX,
+                          dtype=cv2.CV_32F)
+    return image
+
+
+def concatenate_list_data(char_list):
+    """
+    Perform a list concatenation of characters to produce
+    words.
+    """
+    result = ''
+    for element in char_list:
+        result += str(element)
+    return result
+
+
 class Classifier:
     """
     Defines the classifier for image prediction.
@@ -86,52 +117,38 @@ class Classifier:
         else:
             raise ValueError('A trained model must be provided.')
 
-    def preprocess(self, image_path):
-        """
-        Function to preprocess the test image the same
-        way that produces the MNIST 28x28 image, just
-        at 224 x 224.
-        """
-        image = cv2.imread(image_path, 0)
-        (_, image) = cv2.threshold(image, 127, 255,
-                                   cv2.THRESH_BINARY_INV |
-                                   cv2.THRESH_OTSU)
-        image = cv2.resize(image, (224, 224))
-        image = cv2.normalize(image, None, alpha=0, beta=1,
-                              norm_type=cv2.NORM_MINMAX,
-                              dtype=cv2.CV_32F)
-        cv2.imshow("letter", image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        return image
-
-    def classify(self, image_path):
+    def classify_one(self, image_path):
         """
         Attempt to predict and classify. Return an array of the
         top 5 resulting predictions with confidence levels.
         """
         # First, preprocess the image so that it is similar to
         # MNIST images at 224 x 224
-        image = self.preprocess(image_path)
-        image = image.reshape(-1, 224, 224, 1)
-        outp = self.model.predict(image)[0]
+        if self.model is not None:
+            image = preprocess(image_path)
+            image = image.reshape(-1, 224, 224, 1)
+            outp = self.model.predict(image)[0]
 
-        top5_idx = (-outp).argsort()[:1]
+            top_idx = (-outp).argsort()[:1]
 
-        for char in top5_idx:
-            character = CHAR_LABELS.get(char)
-            print(character)
+            for char in top_idx:
+                character = CHAR_LABELS.get(char)
 
-        return character
+            return character
 
+        else:
+            raise ValueError('A trained model must be provided')
 
-if __name__ == "__main__":
-    # Build the argument to load in the image
-    AP = argparse.ArgumentParser()
-    AP.add_argument("-i", "--image", help="singular image path")
-    AP.add_argument("-p", "--path", help="model")
-    ARGS = vars(AP.parse_args())
+    def classify_many(self, image_dirc):
+        """
+        Used to classify the many characters in a word image
+        """
+        word = []
+        if self.model is not None:
+            for image in sorted(glob.iglob(image_dirc + 'char_*'),
+                                key=det_seg.numerical_sort):
+                word.append(self.classify_one(image))
+                os.remove(image)
 
-    # Create the classifier
-    classifier = Classifier(ARGS['path'])
-    classifier.classify(ARGS['image'])
+            c_word = concatenate_list_data(word)
+            return c_word
