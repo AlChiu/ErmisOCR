@@ -3,11 +3,11 @@
 {% block content %}
     <h1>We have translated {{ filename }} as best as we can!</h1>
     <div class="preview_image">
-      <h2>{{ filename }} Image</h2>
+      <h2>Original Image: {{ filename }}</h2>
       <img src= "{{ url_for('static', filename='images/' + filename) }}">
     </div>
     <div class="translation">
-      <h2>Translation:</h2>
+      <h2>Our Translation:</h2>
       <p>{{ data|join(' ') }}</p>
     </div>
 {% endblock %}
