@@ -4,7 +4,6 @@ merge bouding boxes of the characters, and crop them out.
 """
 import os
 import collections
-import glob
 import re
 import pathlib
 from operator import itemgetter
@@ -15,7 +14,6 @@ NUMBERS = re.compile(r'(\d+)')
 IMAGEBOXES = collections.namedtuple('Image_Boxes', ['Name',
                                                     'Image',
                                                     'Boxes'])
-PATH = "/home/alexander/Desktop/projects/ErmisOCR/src/classifier/segmented/"
 
 
 def numerical_sort(value):
@@ -238,48 +236,36 @@ def detector_for_characters(word_image):
     return result
 
 
-def segment(filename, image, boxes, setting):
+def segment_words(image, boxes, save_path):
     """Used to crop out images based on the bounding boxes"""
     for i, box in enumerate(boxes):
-        # Write to file name based on the segment setting
-        if setting == "word":
-            crop_img = image[box[3]:box[3]+box[5],
-                             box[2]:box[2]+box[4]]
-            crop_file = "word_" + str(i) + ".png"
+        crop_img = image[box[3]:box[3]+box[5],
+                         box[2]:box[2]+box[4]]
+        crop_file = "word_" + str(i) + ".png"
+        border_crop = cv2.copyMakeBorder(crop_img, 5, 5, 5, 5,
+                                         cv2.BORDER_CONSTANT,
+                                         value=(255, 255, 255))
+        pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+        image_path = save_path + crop_file
+        cv2.imwrite(image_path, border_crop)
 
-        else:
+
+def segment_chars(filename, image, boxes, save_path):
+    """
+    Used to to crop out character images from word images
+    """
+    for i, box in enumerate(boxes):
+        area = box[2] * box[3]
+        if (box[2] > 30 or box[3] > 30) and area > 250:
             crop_img = image[box[1]:box[1]+box[3],
                              box[0]:box[0]+box[2]]
             path = os.path.splitext(os.path.basename(filename))[0]
             crop_file = "char_" + str(i) + "_" + path + ".png"
-
-        border_crop = cv2.copyMakeBorder(crop_img, 5, 5, 5, 5,
-                                         cv2.BORDER_CONSTANT,
-                                         value=(255, 255, 255))
-        pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-        image_path = PATH + crop_file
-        cv2.imwrite(image_path, border_crop)
-
-
-def detect_segment(image):
-    """
-    Perform the character detection and segment them out
-    """
-    # Draw contours of characters in the image
-    word_boxes = detector_for_words(image)
-    segment(word_boxes.Name,
-            word_boxes.Image,
-            word_boxes.Boxes,
-            "word")
-
-    for word in sorted(glob.iglob(PATH + 'word_*.png'), key=numerical_sort):
-        char_boxes = detector_for_characters(word)
-        w_image = cv2.imread(word)
-
-        # Segment / Crop the characters out
-        segment(char_boxes.Name,
-                w_image,
-                char_boxes.Boxes,
-                "char")
-
-        os.remove(word)
+            border_crop = cv2.copyMakeBorder(crop_img, 5, 5, 5, 5,
+                                             cv2.BORDER_CONSTANT,
+                                             value=(255, 255, 255))
+            pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+            image_path = save_path + crop_file
+            cv2.imwrite(image_path, border_crop)
+        else:
+            pass
