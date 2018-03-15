@@ -1,15 +1,15 @@
 """
-Used to convert and create labeled datasets pickles for training
-We use the NIST SD19 by_class dataset
+Used to center and resize images in the NIST SD19 dataset. The dataset
+directory needs to be restructured with the nist_restructure.py before
+performing the resizing.
 """
-import os
 import time
 import math
 import argparse
+import pathlib
 import cv2
 from scipy import ndimage
 import numpy as np
-import nist_by_class
 
 HEIGHT = 224
 WIDTH = 224
@@ -45,7 +45,7 @@ def resize_shift(image):
     Resize an image into a 224 x 224 image using LeCun's
     preprocessing technique.
     """
-    (_, image) = cv2.threshold(image, 127, 255,
+    (_, image) = cv2.threshold(image, 0, 255,
                                cv2.THRESH_BINARY_INV |
                                cv2.THRESH_OTSU)
 
@@ -94,66 +94,42 @@ def resize_shift(image):
 
 def resize_images(directory):
     """
-    Resize NIST images to 224 x 224
-    Input: by_class directory of NIST SD19
-    Output: Resized images of NIST SD19 by_class
+    Resize all of the images in the dataset directory. This assumes that
+    the directory has already been restructured.
     """
+    # Start a timer
     start = time.time()
-    dirs = os.listdir(directory)
-    # Go through each label folder
-    for label in dirs:
-        label_path = os.path.join(directory, label)
-        d_list = os.listdir(label_path)
 
-        # Go through testing and training folders
-        for folder in d_list:
-            data_path = os.path.join(label_path, folder)
-            images = os.listdir(data_path)
-
-            # Resize each image
-            for item in images:
-                # Get the absolute path of the image
-                image_path = os.path.join(data_path, item)
-
-                # Open the image and convert to grayscale
-                image = cv2.imread(image_path, 0)
-                width, height = image.shape
-
+    # From the parent directory, we go into both the test and training sets
+    dataset_path = pathlib.Path(directory)
+    # For each set, we want to go into each label
+    for dat_set in dataset_path.iterdir():
+        for char in dat_set.iterdir():
+            # For every image in the label directory, resize and shift
+            for image in char.iterdir():
                 # Grab the filename
-                fname = os.path.splitext(image_path)[0] + '_' + label + '.png'
+                name = image.parts[-3]
+                # Read in the image as a grayscale image
+                img = cv2.imread(str(image), 0)
+                # Grab its initial dimensions
+                width, height = img.shape
 
                 if width != WIDTH or height != HEIGHT:
-                    # Resize the image from 128 x 128 to 32 x 32 using
-                    # Lecun's method seen in the MNIST dataset
-
-                    image = resize_shift(image)
-
-                    # Save the image
-                    cv2.imwrite(fname, image)
-                    os.remove(image_path)
-                    print('{} resized'.format(item))
-
+                    # Resize the image to 224 x 224
+                    resized_img = resize_shift(img)
+                    # Save the image with the same filename
+                    cv2.imwrite(str(image), resized_img)
+                    # Print whether the image was resized or not
+                    print('{} resized'.format(name))
                 else:
-                    print(item + ' is already the correct size')
-
-    # Time
+                    print('{} already has the correct dimensions'.format(name))
     print('> Completion Time: {}'.format(time.time() - start))
-    return directory
 
 
 if __name__ == "__main__":
     # Build up the argument to bring in an image
     AP = argparse.ArgumentParser()
     AP.add_argument("-d", "--directory", help="path to dataset")
-    AP.add_argument("-t", "--text", help="path to text_file")
     ARGS = vars(AP.parse_args())
 
-    #############################
-    # Main pipeline test
-    #############################
-
-    # # First, resize the images
-    RESIZED = resize_images(ARGS['directory'])
-
-    # # Second, spilt the dataset into multiple subsets
-    SPLIT, DIVISION = nist_by_class.split_NIST(RESIZED, 10)
+    resize_images(ARGS['directory'])
