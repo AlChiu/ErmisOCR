@@ -107,8 +107,6 @@ def resize_images(directory):
         for char in dat_set.iterdir():
             # For every image in the label directory, resize and shift
             for image in char.iterdir():
-                # Grab the filename
-                name = image.parts[-3]
                 # Read in the image as a grayscale image
                 img = cv2.imread(str(image), 0)
                 # Grab its initial dimensions
@@ -120,9 +118,9 @@ def resize_images(directory):
                     # Save the image with the same filename
                     cv2.imwrite(str(image), resized_img)
                     # Print whether the image was resized or not
-                    print('{} resized'.format(name))
+                    print('{} resized'.format(str(image)))
                 else:
-                    print('{} already has the correct dimensions'.format(name))
+                    print('{} already has the correct dimensions'.format(str(image)))
     print('> Completion Time: {}'.format(time.time() - start))
 
 
