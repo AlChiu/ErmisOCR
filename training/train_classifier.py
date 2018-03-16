@@ -80,10 +80,10 @@ def create_feed_data(directory):
     return train_generator, test_generator, no_train_samples, no_test_samples
 
 
-def build_model():
+def build_model(classes):
     """Build the Keras neural network"""
     print("> Building Keras neural network...")
-    network_model = model.mobile_net()
+    network_model = model.mobile_net(classes=classes)
     return network_model
 
 
@@ -118,6 +118,7 @@ if __name__ == "__main__":
     AP,add_argument("-m", "--model_path", help="path to the model")
     AP.add_argument("-d", "--data_path", help="path to dataset")
     AP.add_argument("-s", "--save_path", help="path to save the final model")
+    AP.add_argument("-c", "--classes", help="number of classes")
     ARGS = vars(AP.parse_args())
 
     #############################
@@ -126,6 +127,7 @@ if __name__ == "__main__":
     DIRECTORY = ARGS['data_path']
     MODEL_PATH = ARGS['model_path']
     MODEL_SAVE_NAME = ARGS['save_path']
+    CLASSES = ARGS['classes']
 
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST = create_feed_data(DIRECTORY)
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     # If it does exist, load the model
     MODEL_DIRECTORY = pathlib.Path(MODEL_PATH)
     if not MODEL_DIRECTORY.exists():
-        CHAR_MODEL = build_model()
+        CHAR_MODEL = build_model(CLASSES)
     else:
         CHAR_MODEL= load_model(MODEL_DIRECTORY)
 
