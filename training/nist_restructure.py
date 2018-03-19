@@ -41,7 +41,7 @@ def by_class_extra_removal(directory):
             if train_path.exists():
                 train_path.rename(train_rename)
 
-            # Remove the .mit and extra folders 
+            # Remove the .mit and extra folders
             for number in HSF_SET:
                 # Remove the .mit files
                 hsf_mit = char.joinpath("hsf_" + number + ".mit")
@@ -78,7 +78,8 @@ def by_merge_combine(directory):
             if not train_path.exists():
                 pathlib.Path(train_path).mkdir(parents=True, exist_ok=True)
 
-            # Go into each hsf directory to move the images in it to the training
+            # Go into each hsf directory to move the
+            # images in it to the training
             for number in HSF_SET:
                 if number != '4':
                     hsf_path = char.joinpath("hsf_" + number)
@@ -118,7 +119,7 @@ def restructure(directory):
             |- Image
     """
     dataset_path = pathlib.Path(directory)
-    
+
     test_path = dataset_path.joinpath("Testing")
     if not test_path.exists():
         pathlib.Path(test_path).mkdir(parents=True, exist_ok=True)
@@ -176,9 +177,11 @@ if __name__ == "__main__":
     # Build up the argument to process a directory
     AP = argparse.ArgumentParser()
     AP.add_argument("-d", "--directory",
-                    help="Absolute path to dataset directory")
+                    help="Absolute path to dataset directory",
+                    required=True)
     AP.add_argument("-s", "--setting",
-                    help="class for by_class, merge for by_merge")
+                    help="class for by_class, merge for by_merge",
+                    required=True)
     ARGS = vars(AP.parse_args())
 
     # First based on the setting, perform the preprocessing of directories
@@ -195,4 +198,3 @@ if __name__ == "__main__":
 
     # Finally, rename the label folders
     rename_labels(ARGS['directory'])
-
