@@ -3,7 +3,6 @@ Train_classifier will load the training and testing
 data, build the neural network graph, then train. It will
 return and save the model as a .h5 file
 """
-import os
 import pathlib
 import argparse
 import matplotlib.pyplot as plt
@@ -15,8 +14,8 @@ import model
 HISTORY = History()
 HEIGHT = 224
 WIDTH = 224
-BATCH_SIZE = 50
-EPOCHS = 15
+BATCH_SIZE = 128
+EPOCHS = 10
 
 
 def create_feed_data(directory):
@@ -39,7 +38,7 @@ def create_feed_data(directory):
     dataset_path = pathlib.Path(directory)
     train_path = dataset_path.joinpath("Training")
     test_path = dataset_path.joinpath("Testing")
-    
+
     # Dimensions of the images
     img_width, img_height = WIDTH, HEIGHT
 
@@ -96,7 +95,7 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
                               histogram_freq=0,
                               write_graph=True,
                               write_images=False)
-    filename = 'checkpoints/weights.{epoch:02d}-{val_loss:.2f}.hdf5'
+    filename = 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'
     checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
 
     model.fit_generator(
@@ -115,10 +114,12 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
 if __name__ == "__main__":
     # Build up the argument to bring in an image
     AP = argparse.ArgumentParser()
-    AP,add_argument("-m", "--model_path", help="path to the model")
-    AP.add_argument("-d", "--data_path", help="path to dataset")
-    AP.add_argument("-s", "--save_path", help="path to save the final model")
-    AP.add_argument("-c", "--classes", help="number of classes")
+    AP.add_argument("-m", "--model_path", help="path to an existing model",
+                    required=False)
+    AP.add_argument("-d", "--data_path", help="path to dataset", required=True)
+    AP.add_argument("-s", "--save_path", help="path to save the final model",
+                    required=True)
+    AP.add_argument("-c", "--classes", help="number of classes", required=True)
     ARGS = vars(AP.parse_args())
 
     #############################
@@ -127,19 +128,19 @@ if __name__ == "__main__":
     DIRECTORY = ARGS['data_path']
     MODEL_PATH = ARGS['model_path']
     MODEL_SAVE_NAME = ARGS['save_path']
-    CLASSES = ARGS['classes']
+    CLASSES = int(ARGS['classes'])
 
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST = create_feed_data(DIRECTORY)
-    
+
     # Check if the model already exists
     # If not, build a new model file
     # If it does exist, load the model
-    MODEL_DIRECTORY = pathlib.Path(MODEL_PATH)
-    if not MODEL_DIRECTORY.exists():
+    if MODEL_PATH is None:
         CHAR_MODEL = build_model(CLASSES)
     else:
-        CHAR_MODEL= load_model(MODEL_DIRECTORY)
+        MODEL_DIRECTORY = pathlib.Path(MODEL_PATH)
+        CHAR_MODEL = load_model(MODEL_DIRECTORY)
 
     HISTORY = fit_model(CHAR_MODEL,
                         TRAIN_GEN,
