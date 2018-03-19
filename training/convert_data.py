@@ -120,14 +120,14 @@ def resize_images(directory):
                     # Print whether the image was resized or not
                     print('{} resized'.format(str(image)))
                 else:
-                    print('{} already has the correct dimensions'.format(str(image)))
+                    print('{} already resized'.format(str(image)))
     print('> Completion Time: {}'.format(time.time() - start))
 
 
 if __name__ == "__main__":
     # Build up the argument to bring in an image
     AP = argparse.ArgumentParser()
-    AP.add_argument("-d", "--directory", help="path to dataset")
+    AP.add_argument("-d", "--directory", help="path to dataset", required=True)
     ARGS = vars(AP.parse_args())
 
     resize_images(ARGS['directory'])
