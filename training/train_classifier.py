@@ -5,9 +5,9 @@ return and save the model as a .h5 file
 """
 import pathlib
 import argparse
-import matplotlib.pyplot as plt
+import json
 from keras.models import load_model
-from keras.callbacks import History, TensorBoard, ModelCheckpoint
+from keras.callbacks import History, ModelCheckpoint, EarlyStopping
 from keras.preprocessing.image import ImageDataGenerator
 import model
 
@@ -44,16 +44,16 @@ def create_feed_data(directory):
 
     # Obtain the number of images in the both
     # training and testing directory
-    no_train_samples = 0
-    no_test_samples = 0
+    no_train_sam = 0
+    no_test_sam = 0
 
     for label in train_path.iterdir():
         for image in label.iterdir():
-            no_train_samples += 1
+            no_train_sam += 1
 
     for label in test_path.iterdir():
         for image in label.iterdir():
-            no_test_samples += 1
+            no_test_sam += 1
 
     # Data augmentation
     train_datagen = ImageDataGenerator(
@@ -63,20 +63,25 @@ def create_feed_data(directory):
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     # Flow the images directly from the directory
-    train_generator = train_datagen.flow_from_directory(
+    train_gen = train_datagen.flow_from_directory(
         train_path,
         target_size=(img_width, img_height),
         color_mode="grayscale",
         batch_size=BATCH_SIZE,
         class_mode='categorical')
-    test_generator = test_datagen.flow_from_directory(
+    test_gen = test_datagen.flow_from_directory(
         test_path,
         target_size=(img_width, img_height),
         color_mode="grayscale",
         batch_size=BATCH_SIZE,
         class_mode='categorical')
 
-    return train_generator, test_generator, no_train_samples, no_test_samples
+    # Create the dictionary and write to a file for the classifier
+    lab_dict = (test_gen.class_indices)
+    # Flip the key-values
+    lab_dict = dict((v, k) for k, v in lab_dict.items())
+
+    return train_gen, test_gen, no_train_sam, no_test_sam, lab_dict
 
 
 def build_model(classes):
@@ -91,12 +96,13 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
     Train the neural network with batch size of 200, 100 epochs,
     and print out training progress.
     """
-    tensorboard = TensorBoard(log_dir='./logs',
-                              histogram_freq=0,
-                              write_graph=True,
-                              write_images=False)
-    filename = 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'
+    filename = 'weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5'
     checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
+    early_stopping = EarlyStopping(monitor='val_acc',
+                                   min_delta=0,
+                                   patience=2,
+                                   verbose=1,
+                                   mode='auto')
 
     model.fit_generator(
         train_gen,
@@ -104,7 +110,7 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
         epochs=EPOCHS,
         validation_data=test_gen,
         validation_steps=no_test // BATCH_SIZE,
-        callbacks=[tensorboard, checkpointer]
+        callbacks=[checkpointer, early_stopping]
     )
 
     model.save(name)
@@ -129,9 +135,13 @@ if __name__ == "__main__":
     MODEL_PATH = ARGS['model_path']
     MODEL_SAVE_NAME = ARGS['save_path']
     CLASSES = int(ARGS['classes'])
-
+    DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels.json'
     # Create training and testing data generators
-    TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST = create_feed_data(DIRECTORY)
+    TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST, DICT = create_feed_data(DIRECTORY)
+
+    # Print out the label dictionary
+    with open(DICT_PATH, 'w') as file:
+        json.dump(DICT, file)
 
     # Check if the model already exists
     # If not, build a new model file
