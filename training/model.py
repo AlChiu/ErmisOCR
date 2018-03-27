@@ -4,6 +4,7 @@ Keras implementation of a character classifier
 import os
 import warnings
 import keras
+from keras import metrics
 from keras.layers import Input, concatenate
 from keras.layers.core import Dense, Activation, Dropout, Flatten, Reshape
 from keras.layers.convolutional import Conv2D, SeparableConv2D
@@ -86,7 +87,7 @@ def mobile_net(alpha=1, classes=62):
                                                      rho=0.9,
                                                      epsilon=None,
                                                      decay=0.0),
-                  metrics=['accuracy'])
+                  metrics=[metrics.categorical_accuracy])
     return model
 
 
