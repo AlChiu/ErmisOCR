@@ -71,7 +71,7 @@ def mobile_net(classes, height, width, alpha=1):
     model.add(BatchNormalization())
     model.add(Activation('elu'))
 
-    shape = (1, 1, int(1024 * alpha))
+    # shape = (1, 1, int(1024 * alpha))
 
     model.add(GlobalAveragePooling2D())
     # model.add(Reshape(shape))
