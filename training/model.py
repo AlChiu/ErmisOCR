@@ -74,11 +74,12 @@ def mobile_net(classes, height, width, alpha=1):
     shape = (1, 1, int(1024 * alpha))
 
     model.add(GlobalAveragePooling2D())
-    model.add(Reshape(shape))
-    model.add(Dropout(rate=1e-3))
-    model.add(Conv2D(classes, (1, 1), padding='same'))
-    model.add(Activation('softmax'))
-    model.add(Reshape((classes,)))
+    # model.add(Reshape(shape))
+    # model.add(Dropout(rate=1e-3))
+    # model.add(Conv2D(classes, (1, 1), padding='same'))
+    # model.add(Activation('softmax'))
+    # model.add(Reshape((classes,)))
+    model.add(Dense(classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.rmsprop(lr=0.001,
