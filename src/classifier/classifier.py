@@ -72,7 +72,8 @@ class Classifier:
 
             top_idx = outp.argmax(axis=-1)
 
-            character = self.labels.get(top_idx)
+            character = self.labels.get(str(top_idx))
+            print(character)
 
             return character
         else:
