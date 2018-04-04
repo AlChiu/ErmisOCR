@@ -96,11 +96,11 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
     """
     filename = 'weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5'
     checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
-    early_stopping = EarlyStopping(monitor='val_acc',
-                                   min_delta=0,
-                                   patience=2,
-                                   verbose=1,
-                                   mode='auto')
+    # early_stopping = EarlyStopping(monitor='val_acc',
+    #                                min_delta=0,
+    #                                patience=2,
+    #                                verbose=1,
+    #                                mode='auto')
 
     model.fit_generator(
         train_gen,
@@ -108,7 +108,7 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
         epochs=EPOCHS,
         validation_data=test_gen,
         validation_steps=no_test // BATCH_SIZE,
-        callbacks=[checkpointer, early_stopping]
+        callbacks=[checkpointer]
     )
 
     model.save(name)
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     AP.add_argument("-s", "--save_path", help="path to save the final model",
                     required=True)
     AP.add_argument("-c", "--classes", help="number of classes", required=True)
-    AP.add_argument("-h", "--height", help="height of image", required=True)
+    AP.add_argument("-l", "--length", help="height of image", required=True)
     AP.add_argument("-w", "--width", help="width of image", required=True)
     ARGS = vars(AP.parse_args())
 
@@ -135,8 +135,8 @@ if __name__ == "__main__":
     MODEL_PATH = ARGS['model_path']
     MODEL_SAVE_NAME = ARGS['save_path']
     CLASSES = int(ARGS['classes'])
-    HEIGHT = int(ARGS['height'])
-    WIDTH = int(ARGS['wdith'])
+    HEIGHT = int(ARGS['length'])
+    WIDTH = int(ARGS['width'])
     DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels.json'
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST, DICT = create_feed_data(DIRECTORY,
