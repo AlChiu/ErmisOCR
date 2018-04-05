@@ -97,18 +97,18 @@ def simple_net(classes, height, width):
     model = Sequential()
 
     # Conv1 Block
-    model.add(64, (3, 3), activation='relu', padding='same',
-              input_shape=(width, height, 1))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same',
+                     input_shape=(width, height, 1)))
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
     # Conv2 Block
-    model.add(128, (3, 3), activation='relu', padding='same')
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
     # FC1 Block
     model.add(Dropout(0.5))
     model.add(Flatten())
-    model.add(Dense(200), activation='relu')
+    model.add(Dense(200, activation='relu'))
 
     # Classifier Block
     model.add(Dense(classes, activation='softmax'))
