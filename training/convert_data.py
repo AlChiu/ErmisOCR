@@ -11,8 +11,8 @@ import cv2
 from scipy import ndimage
 import numpy as np
 
-HEIGHT = 224
-WIDTH = 224
+HEIGHT = 32
+WIDTH = 32
 
 
 def get_best_shift(img):
@@ -42,7 +42,7 @@ def shift(img, sft_x, sft_y):
 
 def resize_shift(image):
     """
-    Resize an image into a 224 x 224 image using LeCun's
+    Resize an image into a 32 x 32 image using LeCun's
     preprocessing technique.
     """
     (_, image) = cv2.threshold(image, 0, 255,
@@ -64,23 +64,23 @@ def resize_shift(image):
 
     rows, cols = image.shape
 
-    # Resize the resulting image into a 224 x 224 image
+    # Resize the resulting image into a 28 x 28 image
     # while maintaining the aspect ratio
     if rows > cols:
-        factor = 214.0 / rows
-        rows = 214
+        factor = 28.0 / rows
+        rows = 28
         cols = int(round(cols * factor))
     else:
-        factor = 214.0 / cols
-        cols = 214
+        factor = 28.0 / cols
+        cols = 28
         rows = int(round(rows * factor))
     image = cv2.resize(image, (cols, rows))
 
-    # Pad the 214 x 214 so that it is now 224 x 224
-    column_padding = (int(math.ceil((224-cols)/2.0)),
-                      int(math.ceil((224-cols)/2.0)))
-    row_padding = (int(math.ceil((224-rows)/2.0)),
-                   int(math.ceil((224-rows)/2.0)))
+    # Pad the 28 x 28 so that it is now 32 x 32
+    column_padding = (int(math.ceil((32-cols)/2.0)),
+                      int(math.ceil((32-cols)/2.0)))
+    row_padding = (int(math.ceil((32-rows)/2.0)),
+                   int(math.ceil((32-rows)/2.0)))
     image = np.lib.pad(image,
                        (row_padding, column_padding),
                        'constant')
