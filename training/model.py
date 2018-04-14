@@ -4,7 +4,7 @@ Keras implementation of a character classifier
 import os
 import warnings
 import keras
-from keras.layers.core import Activation, Dropout, Reshape, Flatten, Dense
+from keras.layers.core import Activation, Dropout, Flatten, Dense
 from keras.layers.convolutional import Conv2D, SeparableConv2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.pooling import GlobalAveragePooling2D, MaxPooling2D
@@ -116,5 +116,50 @@ def simple_net(classes, height, width):
     # Compile the model
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.rmsprop(lr=0.001),
+                  metrics=['accuracy'])
+    return model
+
+
+def lenet(classes, height, width):
+    """
+    LeNet-5 Based classifier
+    """
+    inp_shape = (width, height, 1)
+    model = Sequential()
+
+    # Conv1-Input Layer
+    model.add(Conv2D(12, (5, 5),
+                     activation='relu',
+                     input_shape=inp_shape,
+                     kernel_initializer='he_normal'))
+
+    # Pooling Layer 1
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    # Conv2 Layer
+    model.add(Conv2D(25, (5, 5),
+                     activation='relu',
+                     kernel_initializer='he_normal'))
+
+    # Pooling Layer 2
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    # Fully Connected 1
+    model.add(Flatten())
+    model.add(Dense(180, activation='relu', kernel_initializer='he_normal'))
+    model.add(Dropout(0.5))
+
+    # Fully Connected 2
+    model.add(Dense(100, activation='relu', kernel_initializer='he_normal'))
+    model.add(Dropout(0.5))
+
+    # Classifier
+    model.add(Dense(classes,
+                    activation='softmax',
+                    kernel_initializer='he_normal'))
+
+    # Compile
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='rmsprop',
                   metrics=['accuracy'])
     return model
