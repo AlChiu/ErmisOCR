@@ -12,7 +12,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import model
 
 HISTORY = History()
-BATCH_SIZE = 128
+BATCH_SIZE = 256
 EPOCHS = 10
 
 
@@ -53,11 +53,8 @@ def create_feed_data(directory, height, width):
         for image in label.iterdir():
             no_test_sam += 1
 
-    # Data augmentation
-    train_datagen = ImageDataGenerator(
-        rescale=1. / 255,
-        shear_range=0.2,
-        zoom_range=0.2)
+    # Data augmentation (Rescale the image values)
+    train_datagen = ImageDataGenerator(rescale=1. / 255)
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     # Flow the images directly from the directory
@@ -85,7 +82,7 @@ def create_feed_data(directory, height, width):
 def build_model(classes, height, width):
     """Build the Keras neural network"""
     print("> Building Keras neural network...")
-    network_model = model.simple_net(classes=classes, height=height, width=width)
+    network_model = model.lenet(classes=classes, height=height, width=width)
     return network_model
 
 
@@ -96,11 +93,11 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
     """
     filename = 'weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5'
     checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
-    # early_stopping = EarlyStopping(monitor='val_acc',
-    #                                min_delta=0,
-    #                                patience=2,
-    #                                verbose=1,
-    #                                mode='auto')
+    early_stopping = EarlyStopping(monitor='val_loss',
+                                   min_delta=0,
+                                   patience=2,
+                                   verbose=0,
+                                   mode='auto')
 
     model.fit_generator(
         train_gen,
@@ -108,7 +105,7 @@ def fit_model(model, train_gen, test_gen, no_train, no_test, name):
         epochs=EPOCHS,
         validation_data=test_gen,
         validation_steps=no_test // BATCH_SIZE,
-        callbacks=[checkpointer]
+        callbacks=[checkpointer, early_stopping]
     )
 
     model.save(name)
@@ -124,8 +121,6 @@ if __name__ == "__main__":
     AP.add_argument("-s", "--save_path", help="path to save the final model",
                     required=True)
     AP.add_argument("-c", "--classes", help="number of classes", required=True)
-    AP.add_argument("-l", "--length", help="height of image", required=True)
-    AP.add_argument("-w", "--width", help="width of image", required=True)
     ARGS = vars(AP.parse_args())
 
     #############################
@@ -135,8 +130,8 @@ if __name__ == "__main__":
     MODEL_PATH = ARGS['model_path']
     MODEL_SAVE_NAME = ARGS['save_path']
     CLASSES = int(ARGS['classes'])
-    HEIGHT = int(ARGS['length'])
-    WIDTH = int(ARGS['width'])
+    HEIGHT = 32
+    WIDTH = 32
     DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels.json'
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST, DICT = create_feed_data(DIRECTORY,
