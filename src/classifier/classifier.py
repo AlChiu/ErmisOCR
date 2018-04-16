@@ -13,13 +13,13 @@ def preprocess(image_path):
     """
     Function to preprocess the test image the same
     way that produces the MNIST 28x28 image, just
-    at 224 x 224.
+    at 32 x 32.
     """
     image = cv2.imread(image_path, 0)
     (_, image) = cv2.threshold(image, 0, 255,
                                cv2.THRESH_BINARY_INV |
                                cv2.THRESH_OTSU)
-    image = cv2.resize(image, (224, 224))
+    image = cv2.resize(image, (32, 32))
     image = cv2.normalize(image, None, alpha=0, beta=1,
                           norm_type=cv2.NORM_MINMAX,
                           dtype=cv2.CV_32F)
@@ -64,10 +64,10 @@ class Classifier:
         top 5 resulting predictions with confidence levels.
         """
         # First, preprocess the image so that it is similar to
-        # MNIST images at 224 x 224
+        # MNIST images at 32 x 32
         if self.model is not None:
             image = preprocess(image_path)
-            image = image.reshape(-1, 224, 224, 1)
+            image = image.reshape(-1, 32, 32, 1)
             outp = self.model.predict(image)[0]
 
             top_idx = outp.argmax(axis=-1)
