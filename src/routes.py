@@ -11,7 +11,7 @@ from src.classifier import classifier
 from src.detector import char_detect_segment as det_seg
 
 # Load the classifier
-M_PTH = "src/classifier/model47char_mobile_2_dense.hdf5"
+M_PTH = "model47_vgg7_second.hdf5"
 L_PTH = "src/classifier/char_labels.json"
 CLASSIFIER = classifier.Classifier(M_PTH, L_PTH)
 

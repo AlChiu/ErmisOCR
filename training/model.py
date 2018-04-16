@@ -108,7 +108,7 @@ def simple_net(classes, height, width):
     # FC1 Block
     model.add(Dropout(0.5))
     model.add(Flatten())
-    model.add(Dense(200, activation='relu'))
+    model.add(Dense(400, activation='relu'))
 
     # Classifier Block
     model.add(Dense(classes, activation='softmax'))
@@ -161,5 +161,48 @@ def lenet(classes, height, width):
     # Compile
     model.compile(loss='categorical_crossentropy',
                   optimizer='rmsprop',
+                  metrics=['accuracy'])
+    return model
+
+
+def vgg_esque(classes, height, width):
+    """
+    VGG based with bottlenecking
+    """
+    inp_shape = (width, height, 1)
+    model = Sequential()
+
+    # Conv Block 1
+    model.add(Conv2D(128, (3, 3), activation='relu',
+                     input_shape=inp_shape,
+                     padding='same'))
+    model.add(Conv2D(128, (3, 3), activation='relu',
+                     padding='same'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    # Conv Block 2
+    model.add(Conv2D(256, (3, 3), activation='relu',
+                     padding='same'))
+    model.add(Conv2D(256, (3, 3), activation='relu',
+                     padding='same'))
+    model.add(Conv2D(256, (3, 3), activation='relu',
+                     padding='same'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    # Fully Connected 1
+    model.add(Flatten())
+    model.add(Dense(750, activation='relu'))
+    model.add(Dropout(0.5))
+
+    # Fully Connected 2
+    model.add(Dense(500, activation='relu'))
+    model.add(Dropout(0.5))
+
+    # Classifier
+    model.add(Dense(classes, activation='softmax'))
+
+    # Compile
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adagrad',
                   metrics=['accuracy'])
     return model
