@@ -85,7 +85,7 @@ def create_word_mask(boxes, height, width):
     # We need two row matrices (one is zeros and other is ones).
     # The size of the zero kernel is relative to the width of the image
     # while the one kernel is just +1 of the zero kernel.
-    k_1_width = int(.005 * width)
+    k_1_width = int(.02 * width)
     k_2_width = k_1_width + 1
     kernel_1 = np.zeros((1, k_1_width), dtype="uint8")
     kernel_2 = np.ones((1, k_2_width), dtype="uint8")
@@ -120,11 +120,11 @@ def merge_boxes(contours, height, width, setting):
 
     # Thresholds for checking multi-component characters
     if setting == "word":
-        h1 = .105 * height
-        h2 = .02 * height
-        w1 = .01 * width
+        h1 = .3 * height
+        h2 = .05 * height
+        w1 = .05 * width
     else:
-        h1 = .75 * height
+        h1 = .9 * height
         h2 = .2 * height
         w1 = .05 * width
 
@@ -162,7 +162,9 @@ def merge_boxes(contours, height, width, setting):
             new_y = cur[3]
             new_w = cur[4]
             new_h = cur[5]
-        merged.append([new_x, new_y, new_w, new_h])
+
+        if new_w * new_h > 900:
+            merged.append([new_x, new_y, new_w, new_h])
 
     return merged
 
