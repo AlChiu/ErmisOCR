@@ -132,7 +132,7 @@ if __name__ == "__main__":
     CLASSES = int(ARGS['classes'])
     HEIGHT = 32
     WIDTH = 32
-    DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels.json'
+    DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels' + CLASSES + '.json'
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST, DICT = create_feed_data(DIRECTORY,
                                                                     HEIGHT,
