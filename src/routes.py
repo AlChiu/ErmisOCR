@@ -11,8 +11,8 @@ from src.classifier import classifier
 from src.detector import char_detect_segment as det_seg
 
 # Load the classifier
-M_PTH = "src/classifier/model47_vgg7_second.hdf5"
-L_PTH = "src/classifier/char_labels47.json"
+M_PTH = "src/classifier/model62_ensemble.hdf5"
+L_PTH = "src/classifier/char_labels62.json"
 CLASSIFIER = classifier.Classifier(M_PTH, L_PTH)
 
 # Image upload configuration
