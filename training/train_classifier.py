@@ -54,7 +54,14 @@ def create_feed_data(directory, height, width):
             no_test_sam += 1
 
     # Data augmentation (Rescale the image values)
-    train_datagen = ImageDataGenerator(rescale=1. / 255)
+    train_datagen = ImageDataGenerator(rescale=1. / 255,
+                                       rotation_range=30,
+                                       shear_range=0.3,
+                                       zoom_range=0.3,
+                                       width_shift_range=0.1,
+                                       height_shift_range=0.1,
+                                       fill_mode="constant",
+                                       cval=0)
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     # Flow the images directly from the directory
@@ -132,7 +139,7 @@ if __name__ == "__main__":
     CLASSES = int(ARGS['classes'])
     HEIGHT = 32
     WIDTH = 32
-    DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels' + CLASSES + '.json'
+    DICT_PATH = '/home/alexander/Desktop/projects/ErmisOCR/src/classifier/char_labels' + str(CLASSES) + '.json'
     # Create training and testing data generators
     TRAIN_GEN, TEST_GEN, NO_TRAIN, NO_TEST, DICT = create_feed_data(DIRECTORY,
                                                                     HEIGHT,
