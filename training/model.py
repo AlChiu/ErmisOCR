@@ -4,90 +4,26 @@ Keras implementation of a character classifier
 import os
 import warnings
 import keras
-from keras.layers.core import Activation, Dropout, Flatten, Dense
-from keras.layers.convolutional import Conv2D, SeparableConv2D
+from keras.layers.core import Dropout, Flatten, Dense
+from keras.layers.convolutional import Conv2D
 from keras.layers.normalization import BatchNormalization
-from keras.layers.pooling import GlobalAveragePooling2D, MaxPooling2D
+from keras.layers.pooling import MaxPooling2D
 from keras.models import Sequential
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore')
 
 
-def mobile_net(classes, height, width, alpha=1):
+def simple_1(classes, height, width):
     """
-    Google's Mobile Net modified to use ELU activation.
-    """
-    model = Sequential()
-
-    model.add(Conv2D(int(32*alpha), (3, 3), strides=(2, 2),
-                     input_shape=(width, height, 1), padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(64*alpha), (3, 3), strides=(1, 1),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(128*alpha), (3, 3), strides=(2, 2),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(128*alpha), (3, 3), strides=(1, 1),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(256*alpha), (3, 3), strides=(2, 2),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(256*alpha), (3, 3), strides=(1, 1),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(512*alpha), (3, 3), strides=(2, 2),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    for _ in range(5):
-        model.add(SeparableConv2D(int(512*alpha), (3, 3), strides=(1, 1),
-                                  padding='same'))
-        model.add(BatchNormalization())
-        model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(1024*alpha), (3, 3), strides=(2, 2),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    model.add(SeparableConv2D(int(1024*alpha), (1, 1), strides=(2, 2),
-                              padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('elu'))
-
-    # shape = (1, 1, int(1024 * alpha))
-
-    model.add(GlobalAveragePooling2D())
-    model.add(Dense(classes, activation='softmax'))
-
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.rmsprop(lr=0.001,
-                                                     rho=0.9,
-                                                     epsilon=None,
-                                                     decay=0.0),
-                  metrics=['accuracy'])
-    return model
-
-
-def lenet(classes, height, width):
-    """
-    LeNet-5 Based classifier
+    First model
+    Conv1 has 12 5x5 kernels
+    Pool1 uses a 2x2 kernel
+    Conv2 has 25 5x5 kernels
+    Pool2 uses a 2x2 kernel
+    Dense1 has 180 neurons with 0.5 dropout
+    Dense2 has 100 neurons with 0.5 dropout
+    Dense3 is the classifier
     """
     inp_shape = (width, height, 1)
     model = Sequential()
@@ -97,6 +33,7 @@ def lenet(classes, height, width):
                      activation='relu',
                      input_shape=inp_shape,
                      kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
 
     # Pooling Layer 1
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
@@ -105,17 +42,19 @@ def lenet(classes, height, width):
     model.add(Conv2D(25, (5, 5),
                      activation='relu',
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Pooling Layer 2
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
     # Fully Connected 1
     model.add(Flatten())
     model.add(Dense(180, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Fully Connected 2
     model.add(Dense(100, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Classifier
@@ -130,9 +69,17 @@ def lenet(classes, height, width):
     return model
 
 
-def lenet_2(classes, height, width):
+def simple_2(classes, height, width):
     """
-    LeNet-5_2 Based classifier
+    Second Model
+    Conv1 has 32 3x3 kernels
+    Pool1 uses 2x2 kernel
+    Conv2 has 64 3x3 kernels
+    Pool2 uses 2x2 kernel
+    Conv3 has 128 1x1 kernels
+    Dense1 has 400 neurons with 0.5 dropout
+    Dense2 has 200 neurons with 0.5 dropout
+    Dense3 is the classifier
     """
     inp_shape = (width, height, 1)
     model = Sequential()
@@ -142,7 +89,7 @@ def lenet_2(classes, height, width):
                      activation='relu',
                      input_shape=inp_shape,
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Pooling Layer 1
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
@@ -150,7 +97,7 @@ def lenet_2(classes, height, width):
     model.add(Conv2D(64, (3, 3),
                      activation='relu',
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Pooling Layer 2
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
@@ -161,10 +108,12 @@ def lenet_2(classes, height, width):
     # Fully Connected 1
     model.add(Flatten())
     model.add(Dense(400, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Fully Connected 2
     model.add(Dense(200, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Classifier
@@ -179,9 +128,17 @@ def lenet_2(classes, height, width):
     return model
 
 
-def lenet_3(classes, height, width):
+def simple_3(classes, height, width):
     """
-    LeNet-5_2 Based classifier
+    Third model
+    Conv1 has 16 5x5 kernels
+    Pool1 uses 2x2 kernel
+    Conv2 has 32 3x3 kernels
+    Pool2 uses 2x2 kernel
+    Conv3 has 64 1x1 kernel
+    Dense1 has 300 neurons with 0.5 Dropout
+    Dense2 has 150 neurons with 0.5 Dropout
+    Dense3 is the classifier
     """
     inp_shape = (width, height, 1)
     model = Sequential()
@@ -191,7 +148,7 @@ def lenet_3(classes, height, width):
                      activation='relu',
                      input_shape=inp_shape,
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Pooling Layer 1
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
@@ -199,21 +156,23 @@ def lenet_3(classes, height, width):
     model.add(Conv2D(32, (3, 3),
                      activation='relu',
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Pooling Layer 2
     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
     # Conv3 Layer
     model.add(Conv2D(64, (1, 1), activation='relu',
                      kernel_initializer='he_normal'))
-
+    model.add(BatchNormalization())
     # Fully Connected 1
     model.add(Flatten())
     model.add(Dense(300, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Fully Connected 2
     model.add(Dense(150, activation='relu', kernel_initializer='he_normal'))
+    model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     # Classifier
