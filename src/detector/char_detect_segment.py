@@ -1,6 +1,6 @@
 """char_detect_segment
 This module contains the necessary functions to detect characters,
-merge bouding boxes of the characters, and crop them out.
+merge bounding boxes of the characters, and crop them out.
 """
 import os
 import collections
@@ -17,15 +17,24 @@ IMAGEBOXES = collections.namedtuple('Image_Boxes', ['Name',
 
 
 def numerical_sort(value):
-    """Used to sort file names numberically instead of alphabetically"""
+    """
+    DESCRIPTION: Sort file names numerically instead of alphabetically.
+    INPUT: Filename value
+    OUTPUT: Mapping of filename
+    """
     parts = NUMBERS.split(value)
     parts[1::2] = map(int, parts[1::2])
     return parts
 
 
 def sort_contours(contours, setting):
-    """Sort the contours by x and y coordinates
-     and calculate the central coordinates"""
+    """
+    DESCRIPTION: Sort the contours by x and y coordinates,
+    calculate the central coordinates, and sort left-to-right,
+    top-to-bottom, just like in reading English text.
+    INPUT: List of OpenCV contours, string indicating a setting
+    OUTPUT: A sorted list of bounding boxes with center coordinates
+    """
     bound_box = []
     for contour in contours:
         [x_coord, y_coord, width, height] = cv2.boundingRect(contour)
@@ -62,13 +71,25 @@ def sort_contours(contours, setting):
 
 
 def dis(start, end):
-    """Calculate the Euclidean distance in one direction"""
+    """
+    DESCRIPTION: Calculate the Euclidean distance between two coordinates
+    INPUT: Start and End points
+    OUTPUT: Distance between the two points
+    """
     return abs(start - end)
 
 
 def create_word_mask(boxes, height, width):
-    """Create a mask for our words"""
-    # Create a blank mask
+    """
+    DESCRIPTION: Create a word mask to guide word segmentation.
+    It does this by horizontally dilating the drawn and filled
+    bounding boxes, and then creating boudning boxes of the new
+    shapes.
+    INPUT: List of sorted and merged bounding boxes, height and
+    width of image.
+    OUTPUT: Sorted list of word bounding boxes.
+    """
+    # Create a blank image of zero values.
     mask = np.zeros((height, width), dtype="uint8")
 
     # Using the bounding boxes, we will draw white boxes on the mask
@@ -107,12 +128,12 @@ def create_word_mask(boxes, height, width):
 
 
 def merge_boxes(contours, height, width, setting):
-    """Merge the bounding boxes
-
-    Input -- list of character bounding boxes, image height, and image width
-    Output -- list of new character bounding boxes for special characters
     """
-    # New list of bounding boxes
+    DESCRIPTION: Merge multi-component characters by
+    using whitespace thresholds.
+    INPUT: List of character bounding boxes, image height, and image width
+    OUTPUT: List of character boudning boxes with merged boxes
+    """
     merged = []
 
     # Produce a sorted list of bounding box coordinates with their centers
@@ -170,10 +191,10 @@ def merge_boxes(contours, height, width, setting):
 
 
 def detector_for_words(full_image):
-    """Detect image for words
-
-    Input -- image that needs translation
-    Ouput -- list of bounding box coordinates for the words
+    """
+    DESCRIPTION: Detect words from an image
+    INPUT: Image that needs translation
+    OUTPUT: Sorted list of bounding box coordinates of the words
     """
     filename = os.path.splitext(os.path.basename(full_image))[0]
 
@@ -200,7 +221,7 @@ def detector_for_words(full_image):
                                       cv2.RETR_EXTERNAL,
                                       cv2.CHAIN_APPROX_SIMPLE)
 
-    # Let's draw the contours to see what we have
+    # Sort, Merge, and Mask the image for word results
     boxes = merge_boxes(contours, resized_height, resized_width, "word")
     mask_boxes = create_word_mask(boxes, resized_height, resized_width)
     result = IMAGEBOXES(filename, resized_image, mask_boxes)
@@ -209,24 +230,23 @@ def detector_for_words(full_image):
 
 
 def detector_for_characters(word_image):
-    """Detect characters from word images"""
+    """
+    DESCRIPTION: Detect characters from word images
+    INPUT: Cropped image of words
+    OUTPUT: List of character bounding box coordinates
+    """
     filename = os.path.splitext(os.path.basename(word_image))[0]
     word = cv2.imread(word_image)
 
-    # Convert to grayscale image
     gray_word = cv2.cvtColor(word, cv2.COLOR_BGR2GRAY)
 
-    # Obtain the image dimensions
     height, width = gray_word.shape
 
-    # Blur the image
     gray_blur = cv2.bilateralFilter(gray_word, 13, 55, 55)
 
-    # Otsu binarization
     _, gray_otsu = cv2.threshold(gray_blur, 0, 255,
                                  cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # Contours
     _, char_contours, _ = cv2.findContours(gray_otsu,
                                            cv2.RETR_EXTERNAL,
                                            cv2.CHAIN_APPROX_SIMPLE)
@@ -239,35 +259,63 @@ def detector_for_characters(word_image):
 
 
 def segment_words(image, boxes, save_path):
-    """Used to crop out images based on the bounding boxes"""
+    """
+    DESCRIPTION: Crop out word images based on the list of word bounding boxes
+    INPUT: Full image, list of bounding boxes, save path
+    OUTPUT: Cropped word images saved as "word_X.png" where X represents
+    the position in the list.
+    """
     for i, box in enumerate(boxes):
+        # Crop out the image based on the coordinates
         crop_img = image[box[3]:box[3]+box[5],
                          box[2]:box[2]+box[4]]
+
         crop_file = "word_" + str(i) + ".png"
+
+        # Pad the image with a 5 pixel border
         border_crop = cv2.copyMakeBorder(crop_img, 5, 5, 5, 5,
                                          cv2.BORDER_CONSTANT,
                                          value=(255, 255, 255))
+
         pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+
         image_path = save_path + crop_file
+
         cv2.imwrite(image_path, border_crop)
 
 
 def segment_chars(filename, image, boxes, save_path):
     """
-    Used to to crop out character images from word images
+    DESCRIPTION: Crop out character images from a word image based on list
+    of character bounding boxes
+    INPUT: Word image, filename of the word image, list of character
+    bounding boxes, and character image save path
+    OUTPUT: Character images saved as "char_Y_word_X.png" where X is
+    the word number and Y is the character position in word X.
     """
     for i, box in enumerate(boxes):
+        # Calculate the area of the bounding box
         area = box[2] * box[3]
+
+        # If the area is too small, it might be just noise and we can
+        # ignore that.
         if (box[2] > 30 or box[3] > 30) and area > 250:
+
             crop_img = image[box[1]:box[1]+box[3],
                              box[0]:box[0]+box[2]]
+
             path = os.path.splitext(os.path.basename(filename))[0]
+
             crop_file = "char_" + str(i) + "_" + path + ".png"
+
             border_crop = cv2.copyMakeBorder(crop_img, 5, 5, 5, 5,
                                              cv2.BORDER_CONSTANT,
                                              value=(255, 255, 255))
+
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+
             image_path = save_path + crop_file
+
             cv2.imwrite(image_path, border_crop)
         else:
             pass

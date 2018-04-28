@@ -1,7 +1,6 @@
 """nist_restructure.py
-Used to restructure the NIST SD19 dataset
-and resize the images using LeCun's method seen in
-MNIST
+Used to restructure the NIST SD19 dataset so that it is
+usable with Keras' flow from directory functionalilty.
 """
 import pathlib
 import shutil
@@ -11,14 +10,25 @@ import argparse
 HSF_SET = ['0', '1', '2', '3', '4', '6', '7']
 
 
-# We need to remove the extra images and files
-# in the by_class dataset
 def by_class_extra_removal(directory):
     """
-    Use to remove unneccessary files in the by_class dataset
-    such as the .mit files and the extra images since they are
-    copies. This will leave behind a label directory with only
-    a testing and training directory of images.
+    DESCRIPTION: Use to remove unneccessary files in the
+    by_class dataset such as the .mit files and the extra
+    images since they are copies. This will leave behind a
+    label directory with only a testing and training directory of images.
+    INPUT: Path to the by_class dataset root
+    OUTPUT: Dataset structure described below:
+        by_class
+        |
+        |-- character label
+            |
+            |-- testing
+                |
+                |-- image.png
+            |
+            |-- training
+                |
+                |-- image.png
     """
     dataset_path = pathlib.Path(directory)
 
@@ -54,10 +64,23 @@ def by_class_extra_removal(directory):
                     shutil.rmtree(hsf_directory)
 
 
-# We need to create the traing and testing sets from the by_merge set
 def by_merge_combine(directory):
     """
-    Use to merge and create the test and training set for each label
+    DESCRIPTION: Use to merge and create the test and
+    training set for each label in the by_merge dataset.
+    INPUT: Path to the by_merge dataset root
+    OUTPUT: Dataset structure described below:
+        by_merge
+        |
+        |-- character label
+            |
+            |-- testing
+                |
+                |-- image.png
+            |
+            |-- training
+                |
+                |-- image.png
     """
     dataset_path = pathlib.Path(directory)
 
@@ -85,14 +108,9 @@ def by_merge_combine(directory):
                     hsf_path = char.joinpath("hsf_" + number)
                     if hsf_path.exists():
                         for old_image in hsf_path.iterdir():
-                            # Grab the old image path and image name
                             old_image_path = pathlib.Path(old_image)
                             image_name = old_image_path.parts[-1]
-
-                            # Create the new image path
                             new_image_path = train_path.joinpath(image_name)
-
-                            # Rename/Move image to new location
                             old_image_path.rename(new_image_path)
 
                         # Remove the empty hsf folder
@@ -104,19 +122,19 @@ def by_merge_combine(directory):
                     hsf_mit.unlink()
 
 
-# Next we need to restructure the directory so that it adheres
-# to Keras flow from directory functionality
 def restructure(directory):
     """
-    Use to restructure the provided directory to resemble
-
-    Parent
-    |- Training
-    |   |- Label
-    |       |- Image
-    |- Testing
-        |- Label
-            |- Image
+    DESCRIPTION: Restructure the provided directory so that it
+    follows Keras flow from directory structure.
+    INPUT: Dataset directory
+    OUTPUT:
+        Parent
+        |- Training
+        |   |- Label
+        |       |- Image
+        |- Testing
+            |- Label
+                |- Image
     """
     dataset_path = pathlib.Path(directory)
 
@@ -153,10 +171,12 @@ def restructure(directory):
                 char.rmdir()
 
 
-# Now we change the label names so that are their ascii counterparts
 def rename_labels(directory):
     """
-    Use to translate the NIST labels from hexadecimal to ascii representation
+    DESCRIPTION: Translate the NIST labels from
+    hexadecimal to ascii representation
+    INPUT: Dataset path
+    OUTPUT: Labels renamed to ascii representation
     """
     dataset_path = pathlib.Path(directory)
     for set_data in dataset_path.iterdir():
@@ -167,9 +187,7 @@ def rename_labels(directory):
             label = char.parts[-1][:2]
             # Translate from hex to ascii
             new_label = (binascii.unhexlify(label)).decode("ascii")
-            # Create the translated path
             new_label_path = set_data_path.joinpath(new_label)
-            # Rename the directory
             char.rename(new_label_path)
 
 

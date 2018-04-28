@@ -1,7 +1,7 @@
-"""
+"""train_classifier.py
 Train_classifier will load the training and testing
 data, build the neural network graph, then train. It will
-return and save the model as a .h5 file
+return and save the model as a .hdf5 file
 """
 import pathlib
 import argparse
@@ -30,14 +30,13 @@ def create_feed_data(directory, height, width):
     |- Testing
         |- Label
             |- Image
-    OUTPUT: keras training and validation generators
+    OUTPUT: Keras training and validation generators
     """
     # Create the directory variables
     dataset_path = pathlib.Path(directory)
     train_path = dataset_path.joinpath("Training")
     test_path = dataset_path.joinpath("Testing")
 
-    # Dimensions of the images
     img_width, img_height = width, height
 
     # Obtain the number of images in the both
@@ -55,13 +54,16 @@ def create_feed_data(directory, height, width):
 
     # Data augmentation (Rescale the image values)
     train_datagen = ImageDataGenerator(rescale=1. / 255,
-                                       rotation_range=30,
+                                       featurewise_center=True,
+                                       featurewise_std_normalization=True,
+                                       rotation_range=25,
                                        shear_range=0.3,
                                        zoom_range=0.3,
                                        width_shift_range=0.1,
                                        height_shift_range=0.1,
                                        fill_mode="constant",
-                                       cval=0)
+                                       cval=0,
+                                       zca_whitening=True)
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     # Flow the images directly from the directory
@@ -95,17 +97,23 @@ def build_model(classes, height, width):
 
 def fit_model(model, train_gen, test_gen, no_train, no_test, name):
     """
-    Train the neural network with batch size of 200, 100 epochs,
-    and print out training progress.
+    DESCRIPTION: Train the neural network with batch size of BATCH, 10 epochs,
+    and print out training progress. Uses checkpoints and early stopping.
+    INPUT: Keras Training and Testing generators, number of samples, and model
+    OUTPUT: Keras Trainined model
     """
+    # Checkpoints for each iteration.
     filename = 'weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5'
     checkpointer = ModelCheckpoint(filepath=filename, verbose=1, period=1)
+
+    # Early stopping to stop training when accuracy is not improving.
     early_stopping = EarlyStopping(monitor='val_loss',
                                    min_delta=0,
                                    patience=2,
                                    verbose=0,
                                    mode='auto')
 
+    # Begin training with the two callbacks.
     model.fit_generator(
         train_gen,
         steps_per_epoch=no_train // BATCH_SIZE,

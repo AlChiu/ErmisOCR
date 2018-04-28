@@ -1,4 +1,4 @@
-"""
+"""ensemnble.py
 Used to ensemble a number of different trained models
 into a single model.
 """
@@ -10,18 +10,21 @@ import train_classifier as tc
 
 def ensemble(models, model_input):
     """
-    Function to combine multiple models into one.
+    DESCRIPTION: Combine multiple models into one.
     Input layer is the same since the images will
-    have to have the same dimensions.
-    Output layer will average the results and classify.
+    have to have the same dimensions. Output layer
+    will average the results and classify.
+    INPUT: List of models that we want to ensemble,
+    Dimensions of the input image in tuple format
+    OUTPUT: Compiled Keras model of our ensemble.
     """
     # Collect the outputs of the models
     output = [model(model_input) for model in models]
 
-    # Average the outputs
+    # Averaging Layer
     avg = average(output)
 
-    # Build the one model
+    # Build the ensembled model
     model_ens = Model(inputs=model_input, outputs=avg,
                       name='ensemble')
 
@@ -34,9 +37,11 @@ def ensemble(models, model_input):
 
 def evaluate_error(model, test_gen, no_test_sam):
     """
-    Evaluate the networks
+    DESCRIPTION: Evaluate the network performance
+    INPUT: The trained model, the test set generator,
+    number of testing images
+    OUTPUT: List of statistics about the performance of the model
     """
-    # Grab the data generators
     stats = model.evaluate_generator(test_gen, no_test_sam // 256)
     return stats
 
@@ -69,9 +74,9 @@ if __name__ == "__main__":
     ENSEMBLE = load_model("src/classifier/model62_ensemble.hdf5")
     MODELS.append(ENSEMBLE)
 
-    _, test_gen, _, no_test_sam, _ = tc.create_feed_data(PATH, 32, 32)
+    _, TEST_GEN, _, NB_TEST_SAM, _ = tc.create_feed_data(PATH, 32, 32)
     # Evaluate all of the models
     for model in MODELS:
-        score = evaluate_error(model, test_gen, no_test_sam)
+        score = evaluate_error(model, TEST_GEN, NB_TEST_SAM)
         model.summary()
         print("Loss: ", score[0], "Accuracy: ", score[1])

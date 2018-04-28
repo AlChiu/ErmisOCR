@@ -1,4 +1,4 @@
-"""
+"""routes.py
 Main routes to define the paths the Flask server.
 """
 import os
@@ -22,31 +22,32 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'super_secret'
 
 
-# Check file extension
 def allowed_file(filename):
     """
-    Check if file has the correct extension
+    DESCRIPTION: Check if file has the correct extension
+    INPUT: Full filename
+    OUTPUT: Boolean if the file is allowed
     """
     return '.' in filename and \
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Begin defining the application routes
 
 # Homepage/Index Route
 @app.route('/')
 @app.route('/index')
 def index():
     """
-    Render the homepage
+    DESCRIPTION: Render the upload/homepage
     """
     return render_template('index.html', title='Home')
 
 
-# Upload image route
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
     """
-    User uploads an image, server will segment and classify
+    DESCRIPTION: Uploads an image, server will segment and classify
+    INPUT: Full image file
+    OUTPUT: Translation of image file
     """
     # Path to the segmented word and character images.
     pth = "src/classifier/segmented/"
@@ -95,7 +96,7 @@ def upload():
             c_words.append(CLASSIFIER.classify_many(pth))
             os.remove(word)
 
-        # return render_template('index.html', title='UPLOADED')
+        # Render the translation on the show_entries page
         return render_template('show_entries.html',
                                data=c_words,
                                title="Translation",
