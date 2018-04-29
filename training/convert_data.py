@@ -1,4 +1,4 @@
-"""
+"""convert_data.py
 Used to center and resize images in the NIST SD19 dataset. The dataset
 directory needs to be restructured with the nist_restructure.py before
 performing the resizing.
@@ -17,10 +17,12 @@ WIDTH = 32
 
 def get_best_shift(img):
     """
-    Using scipy, we can calculate the center of mass of
-    the input image and return the best shift amount to
-    center an image on the character.
+    DESCRIPTION: Calculate the center of mass of the input image
+    and return the best shift amount to center an image on the character.
+    INPUT: Image
+    OUTPUT: Calculated shift amount for x and y directions
     """
+    # Calculate the center of mass through scipy
     center_y, center_x = ndimage.measurements.center_of_mass(img)
 
     rows, columns = img.shape
@@ -32,24 +34,32 @@ def get_best_shift(img):
 
 def shift(img, sft_x, sft_y):
     """
-    Shift the input image by sft_x and sft_y pixels
+    DESCRIPTION: Shift the input image by sft_x and sft_y pixels
+    INPUT: Image to be shifted, both shift amounts
+    OUTPUT: Shifted image
     """
     rows, columns = img.shape
+
+    # Transformation matrix to shift an image by some amount.
     trans = np.float32([[1, 0, sft_x], [0, 1, sft_y]])
+
     shifted_image = cv2.warpAffine(img, trans, (columns, rows))
     return shifted_image
 
 
-def resize_shift(image):
+def preprocess(image):
     """
-    Resize an image into a 32 x 32 image using LeCun's
-    preprocessing technique.
+    DESCRIPTION: Preprocess an image into a 32 x 32 image
+    using LeCun's preprocessing technique used for the
+    MNIST dataset
+    INPUT: Character image
+    OUTPUT: Processed character image resized to 32 x 32
     """
     (_, image) = cv2.threshold(image, 0, 255,
                                cv2.THRESH_BINARY_INV |
                                cv2.THRESH_OTSU)
 
-    # Remove rows and columns that are all black
+    # Remove rows and columns that sum to zero
     while np.sum(image[0]) == 0:
         image = image[1:]
 
@@ -92,10 +102,13 @@ def resize_shift(image):
     return image
 
 
-def resize_images(directory):
+def preprocess_images(directory):
     """
-    Resize all of the images in the dataset directory. This assumes that
-    the directory has already been restructured.
+    DESCRIPTION: Preprocess all of the images in the dataset directory.
+    This assumes that the directory has already been restructured with
+    nist_restructure.py.
+    INPUT: Dataset path
+    OUTPUT: Processed dataset
     """
     # Start a timer
     start = time.time()
@@ -109,15 +122,12 @@ def resize_images(directory):
             for image in char.iterdir():
                 # Read in the image as a grayscale image
                 img = cv2.imread(str(image), 0)
-                # Grab its initial dimensions
                 width, height = img.shape
 
                 if width != WIDTH or height != HEIGHT:
-                    # Resize the image to 224 x 224
-                    resized_img = resize_shift(img)
-                    # Save the image with the same filename
-                    cv2.imwrite(str(image), resized_img)
-                    # Print whether the image was resized or not
+                    processed_img = preprocess(img)
+                    # Overwrite old image
+                    cv2.imwrite(str(image), processed_img)
                     print('{} resized'.format(str(image)))
                 else:
                     print('{} already resized'.format(str(image)))
@@ -130,4 +140,4 @@ if __name__ == "__main__":
     AP.add_argument("-d", "--directory", help="path to dataset", required=True)
     ARGS = vars(AP.parse_args())
 
-    resize_images(ARGS['directory'])
+    preprocess_images(ARGS['directory'])

@@ -1,5 +1,5 @@
-"""
-Classifier class definition
+"""classifier.py
+Define the classifier class and the preprocessing method
 """
 import os
 import glob
@@ -11,9 +11,10 @@ from src.detector import char_detect_segment as det_seg
 
 def preprocess(image_path):
     """
-    Function to preprocess the test image the same
-    way that produces the MNIST 28x28 image, just
-    at 32 x 32.
+    DESCRIPTION: Preprocess the image the same way that we preprocessed the
+    dataset.
+    INPUT: Image path
+    OUTPUT: Processed image resized to 32 x 32
     """
     image = cv2.imread(image_path, 0)
     (_, image) = cv2.threshold(image, 0, 255,
@@ -28,8 +29,9 @@ def preprocess(image_path):
 
 def concatenate_list_data(char_list):
     """
-    Perform a list concatenation of characters to produce
-    words.
+    DESCRIPTION: List concatenation of characters to produce words.
+    INPUT: Translated character list
+    OUTPUT: A single element that represents a word
     """
     result = ''
     for element in char_list:
@@ -39,13 +41,14 @@ def concatenate_list_data(char_list):
 
 class Classifier:
     """
-    Defines the classifier for image prediction.
+    DESCRIPTION: Defines the classifier for image prediction.
     Needs a trained neural model to function properly.
     """
     def __init__(self, model, lab_dict):
         """
         Initialize the character classifier with the
-        specified trained neural network model.
+        specified trained neural network model and character
+        dictionary.
         """
         if model is not None:
             self.model = load_model(model)
@@ -60,11 +63,10 @@ class Classifier:
 
     def classify_one(self, image_path):
         """
-        Attempt to predict and classify. Return an array of the
-        top 5 resulting predictions with confidence levels.
+        DESCRIPTION: Predict and classify a character image.
+        INTPUT: Path to character image.
+        OUTPUT: Character class label of the prediction.
         """
-        # First, preprocess the image so that it is similar to
-        # MNIST images at 32 x 32
         if self.model is not None:
             image = preprocess(image_path)
             image = image.reshape(-1, 32, 32, 1)
@@ -81,7 +83,10 @@ class Classifier:
 
     def classify_many(self, image_dirc):
         """
-        Used to classify the many characters in a word image
+        DESCRIPTION: Classify many characters of a word
+        using the classify_one function.
+        INPUT: Directory of word image files
+        OUTPUT: A string representing a single word
         """
         word = []
         if self.model is not None:
