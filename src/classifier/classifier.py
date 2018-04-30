@@ -3,27 +3,102 @@ Define the classifier class and the preprocessing method
 """
 import os
 import glob
+import math
 import json
 import cv2
+from scipy import ndimage
+import numpy as np
 from keras.models import load_model
 from src.detector import char_detect_segment as det_seg
 
 
-def preprocess(image_path):
+def get_best_shift(img):
     """
-    DESCRIPTION: Preprocess the image the same way that we preprocessed the
-    dataset.
-    INPUT: Image path
-    OUTPUT: Processed image resized to 32 x 32
+    DESCRIPTION: Calculate the center of mass of the input image
+    and return the best shift amount to center an image on the character.
+    INPUT: Image
+    OUTPUT: Calculated shift amount for x and y directions
     """
-    image = cv2.imread(image_path, 0)
-    (_, image) = cv2.threshold(image, 0, 255,
-                               cv2.THRESH_BINARY_INV |
-                               cv2.THRESH_OTSU)
-    image = cv2.resize(image, (32, 32))
-    image = cv2.normalize(image, None, alpha=0, beta=1,
-                          norm_type=cv2.NORM_MINMAX,
-                          dtype=cv2.CV_32F)
+    # Calculate the center of mass through scipy
+    center_y, center_x = ndimage.measurements.center_of_mass(img)
+
+    rows, columns = img.shape
+    shift_x = np.round(columns/2.0 - center_x).astype(int)
+    shift_y = np.round(rows/2.0 - center_y).astype(int)
+
+    return shift_x, shift_y
+
+
+def shift(img, sft_x, sft_y):
+    """
+    DESCRIPTION: Shift the input image by sft_x and sft_y pixels
+    INPUT: Image to be shifted, both shift amounts
+    OUTPUT: Shifted image
+    """
+    rows, columns = img.shape
+
+    # Transformation matrix to shift an image by some amount.
+    trans = np.float32([[1, 0, sft_x], [0, 1, sft_y]])
+
+    shifted_image = cv2.warpAffine(img, trans, (columns, rows))
+    return shifted_image
+
+
+def preprocess(image):
+    """
+    DESCRIPTION: Preprocess an image into a 32 x 32 image
+    using LeCun's preprocessing technique used for the
+    MNIST dataset
+    INPUT: Character image
+    OUTPUT: Processed character image resized to 32 x 32
+    """
+    # Invert
+    image = cv2.bitwise_not(image)
+
+    # Gaussian Blur
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+
+    # Remove rows and columns that sum to zero: ROI Extraction
+    while np.sum(image[0]) == 0:
+        image = image[1:]
+
+    while np.sum(image[:, 0]) == 0:
+        image = np.delete(image, 0, 1)
+
+    while np.sum(image[-1]) == 0:
+        image = image[:-1]
+
+    while np.sum(image[: -1]) == 0:
+        image = np.delete(image, -1, 1)
+
+    rows, cols = image.shape
+
+    # Resize the resulting image into a 28 x 28 image
+    # while maintaining the aspect ratio
+    if rows > cols:
+        factor = 28.0 / rows
+        rows = 28
+        cols = int(round(cols * factor))
+    else:
+        factor = 28.0 / cols
+        cols = 28
+        rows = int(round(rows * factor))
+    image = cv2.resize(image, (cols, rows))
+
+    # Pad the 28 x 28 so that it is now 32 x 32
+    column_padding = (int(math.ceil((32-cols)/2.0)),
+                      int(math.ceil((32-cols)/2.0)))
+    row_padding = (int(math.ceil((32-rows)/2.0)),
+                   int(math.ceil((32-rows)/2.0)))
+    image = np.lib.pad(image,
+                       (row_padding, column_padding),
+                       'constant')
+
+    # Center the character in this new image
+    x_shift, y_shift = get_best_shift(image)
+    shifted = shift(image, x_shift, y_shift)
+    image = shifted
+
     return image
 
 
