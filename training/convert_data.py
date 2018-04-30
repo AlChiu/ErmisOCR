@@ -55,11 +55,13 @@ def preprocess(image):
     INPUT: Character image
     OUTPUT: Processed character image resized to 32 x 32
     """
-    (_, image) = cv2.threshold(image, 0, 255,
-                               cv2.THRESH_BINARY_INV |
-                               cv2.THRESH_OTSU)
+    # Invert
+    image = cv2.bitwise_not(image)
 
-    # Remove rows and columns that sum to zero
+    # Gaussian Blur
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+
+    # Remove rows and columns that sum to zero: ROI Extraction
     while np.sum(image[0]) == 0:
         image = image[1:]
 
@@ -99,6 +101,7 @@ def preprocess(image):
     x_shift, y_shift = get_best_shift(image)
     shifted = shift(image, x_shift, y_shift)
     image = shifted
+
     return image
 
 
