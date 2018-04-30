@@ -56,9 +56,9 @@ if __name__ == "__main__":
     PATH = ARGS['data_path']
 
     # Load the three models
-    TEMP_MODEL_1 = load_model("src/classifier/model62_lenet_rmsprop.hdf5")
-    TEMP_MODEL_2 = load_model("src/classifier/model62_lenet2_rmsprop.hdf5")
-    TEMP_MODEL_3 = load_model("src/classifier/model62_lenet3_rmsprop.hdf5")
+    TEMP_MODEL_1 = load_model("src/classifier/model47_simple1.hdf5")
+    TEMP_MODEL_2 = load_model("src/classifier/model47_simple2.hdf5")
+    TEMP_MODEL_3 = load_model("src/classifier/model47_simple3.hdf5")
 
     # Append to list
     MODELS.append(TEMP_MODEL_1)
@@ -70,8 +70,8 @@ if __name__ == "__main__":
 
     # Ensemble the models
     ENS_MODEL = ensemble(MODELS, INPUT)
-    ENS_MODEL.save("src/classifier/model62_ensemble.hdf5")
-    ENSEMBLE = load_model("src/classifier/model62_ensemble.hdf5")
+    ENS_MODEL.save("src/classifier/model47_ensemble.hdf5")
+    ENSEMBLE = load_model("src/classifier/model47_ensemble.hdf5")
     MODELS.append(ENSEMBLE)
 
     _, TEST_GEN, _, NB_TEST_SAM, _ = tc.create_feed_data(PATH, 32, 32)
