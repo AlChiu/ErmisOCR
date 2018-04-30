@@ -91,7 +91,7 @@ def create_feed_data(directory, height, width):
 def build_model(classes, height, width):
     """Build the Keras neural network"""
     print("> Building Keras neural network...")
-    network_model = model.lenet(classes=classes, height=height, width=width)
+    network_model = model.simple_3(classes=classes, height=height, width=width)
     return network_model
 
 
