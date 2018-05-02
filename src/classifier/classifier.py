@@ -53,6 +53,7 @@ def preprocess(image):
     OUTPUT: Processed character image resized to 32 x 32
     """
     # Invert
+    image = cv2.imread(image, 0)
     image = cv2.bitwise_not(image)
 
     # Gaussian Blur
@@ -97,7 +98,7 @@ def preprocess(image):
     # Center the character in this new image
     x_shift, y_shift = get_best_shift(image)
     shifted = shift(image, x_shift, y_shift)
-    image = shifted
+    image = cv2.resize(shifted, (32, 32))
 
     return image
 
