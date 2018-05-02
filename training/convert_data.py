@@ -71,7 +71,7 @@ def preprocess(image):
     while np.sum(image[-1]) == 0:
         image = image[:-1]
 
-    while np.sum(image[: -1]) == 0:
+    while np.sum(image[:, -1]) == 0:
         image = np.delete(image, -1, 1)
 
     rows, cols = image.shape
